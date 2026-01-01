@@ -1,1 +1,3 @@
-/Users/julian/dev/opencode-orca/mise.toml
+[tools]
+bun = "1.3.5"
+
