@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Usage: bun run wt:new <branch> [base]
-# Creates worktree at ../opencode-orca-wt/<sanitized-branch>
+# Creates worktree at worktrees/<sanitized-branch>
 
 set -euo pipefail
 
@@ -10,8 +10,8 @@ BASE="${2:-main}"
 # Sanitize branch name for folder (feat/login → feat-login)
 FOLDER_NAME="${BRANCH//\//-}"
 
-# Worktree root directory (sibling to main repo)
-WT_ROOT="../opencode-orca-wt"
+# Worktree root directory (inside repo, gitignored)
+WT_ROOT="worktrees"
 WT_PATH="$WT_ROOT/$FOLDER_NAME"
 
 # Create worktree root if needed
@@ -31,7 +31,7 @@ fi
 
 # Install dependencies
 echo "Installing dependencies..."
-(cd "$WT_PATH" && bun install)
+(cd "$WT_PATH" && mise x -- bun install)
 
 echo ""
 echo "Worktree ready at: $WT_PATH"

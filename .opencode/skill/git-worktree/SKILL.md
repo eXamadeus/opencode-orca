@@ -10,11 +10,12 @@ Worktrees enable working on multiple branches simultaneously without stashing or
 ## Layout
 
 ```
-~/dev/
-├── opencode-orca/              # Main repo (main branch)
-└── opencode-orca-wt/           # Worktree container
-    ├── feat-login/             # Branch: feat/login
-    └── fix-build/              # Branch: fix/build
+opencode-orca/
+├── worktrees/                  # Worktree container (gitignored)
+│   ├── feat-login/             # Branch: feat/login
+│   └── fix-build/              # Branch: fix/build
+├── src/
+└── ...
 ```
 
 ## Commands
@@ -49,27 +50,24 @@ bun run wt:rm feat-auth
 When `main` has new commits you want in your feature branch:
 
 ```bash
-cd ../opencode-orca-wt/feat-login
+cd worktrees/feat-login
 
 # Fetch latest
 git fetch origin
 
-# Rebase (cleaner history)
-git rebase origin/main
-
-# Or merge (keeps merge commit)
+# Merge
 git merge origin/main
 ```
 
 Or from anywhere using `-C`:
 
 ```bash
-git -C ../opencode-orca-wt/feat-login fetch origin
-git -C ../opencode-orca-wt/feat-login rebase origin/main
+git -C worktrees/feat-login fetch origin
+git -C worktrees/feat-login merge origin/main
 ```
 
 ## Notes
 
 - Branch names are sanitized: `feat/login` → `feat-login` folder
-- Dependencies installed automatically on creation
-- Each worktree is independent — no shared node_modules with main repo
+- Dependencies are installed automatically on creation
+- Each worktree is independent — no shared node_modules with the main repo
