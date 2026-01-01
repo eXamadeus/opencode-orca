@@ -44,6 +44,30 @@ bun run wt:list
 bun run wt:rm feat-auth
 ```
 
+## Updating a Worktree from Main
+
+When `main` has new commits you want in your feature branch:
+
+```bash
+cd ../opencode-orca-wt/feat-login
+
+# Fetch latest
+git fetch origin
+
+# Rebase (cleaner history)
+git rebase origin/main
+
+# Or merge (keeps merge commit)
+git merge origin/main
+```
+
+Or from anywhere using `-C`:
+
+```bash
+git -C ../opencode-orca-wt/feat-login fetch origin
+git -C ../opencode-orca-wt/feat-login rebase origin/main
+```
+
 ## Notes
 
 - Branch names are sanitized: `feat/login` → `feat-login` folder
