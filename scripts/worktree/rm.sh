@@ -7,8 +7,8 @@ set -euo pipefail
 DIRNAME="${1:?Usage: bun run wt:rm <dirname>}"
 
 # If it's just a folder name, prepend the worktree root
-if [[ "$DIRNAME" != /* && "$DIRNAME" != ../* ]]; then
-  WT_PATH="../opencode-orca-wt/$DIRNAME"
+if [[ "$DIRNAME" != /* && "$DIRNAME" != ./* ]]; then
+  WT_PATH="worktrees/$DIRNAME"
 else
   WT_PATH="$DIRNAME"
 fi

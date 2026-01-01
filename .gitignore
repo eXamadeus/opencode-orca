@@ -28,3 +28,6 @@ coverage/
 
 # Bun
 bun.lock
+
+# Worktrees
+worktrees/
