@@ -7,6 +7,22 @@ description: Git worktree workflow helpers for parallel development on multiple 
 
 Worktrees enable working on multiple branches simultaneously without stashing or switching.
 
+## Branch Naming Convention
+
+Use semantic prefixes based on the type of work:
+
+| Prefix     | Use When                                          | Example                  |
+| ---------- | ------------------------------------------------- | ------------------------ |
+| `feat/`    | New functionality, enhancements, additions        | `feat/user-auth`         |
+| `fix/`     | Bug fixes, corrections, repairs                   | `fix/login-redirect`     |
+| `chore/`   | Maintenance, dependencies, config updates         | `chore/update-deps`      |
+| `refactor/`| Code restructuring without behavior change        | `refactor/api-handlers`  |
+| `docs/`    | Documentation only                                | `docs/api-reference`     |
+| `test/`    | Adding or updating tests                          | `test/auth-coverage`     |
+| `ci/`      | CI/CD pipeline changes                            | `ci/github-actions`      |
+| `style/`   | Formatting, whitespace (no code change)           | `style/lint-fixes`       |
+| `perf/`    | Performance improvements                          | `perf/query-optimization`|
+
 ## Layout
 
 ```

@@ -1,0 +1,47 @@
+{
+  "repository": {
+    "owner": "eXamadeus",
+    "name": "opencode-orca",
+    "full_name": "eXamadeus/opencode-orca",
+    "default_branch": "main"
+  },
+  "project": {
+    "name": "Orca",
+    "number": 2,
+    "owner": "@me",
+    "url": "https://github.com/users/eXamadeus/projects/2",
+    "node_id": "PVT_kwHOAjcIh84BLwoj",
+    "fields": {
+      "status": {
+        "field_id": "PVTSSF_lAHOAjcIh84BLwojzg7PNY0",
+        "options": {
+          "todo": "f75ad846",
+          "in_progress": "47fc9ee4",
+          "done": "98236657"
+        }
+      }
+    }
+  },
+  "labels": {
+    "epic": { "name": "epic", "description": "Larger effort with sub-issues" },
+    "bug": { "name": "bug", "description": "Something broken" },
+    "feature": { "name": "feature", "description": "New functionality" },
+    "chore": { "name": "chore", "description": "Maintenance/cleanup" }
+  },
+  "current_epic": {
+    "number": 6,
+    "title": "Epic: opencode-orca Plugin",
+    "sub_issues": "7-18"
+  },
+  "extensions": {
+    "gh-sub-issue": "yahsan2/gh-sub-issue"
+  },
+  "git": {
+    "commit_style": "conventional",
+    "branch_prefix": {
+      "feature": "feature/",
+      "bugfix": "fix/",
+      "chore": "chore/"
+    }
+  }
+}
