@@ -73,3 +73,6 @@ export type {
   TaskMessage,
   UserInputMessage,
 } from './messages'
+
+// JSON Schema generation
+export { generateMessageJsonSchema, generateProtocolDocumentation } from './jsonschema'

@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@opencode-ai/plugin": "^1.0.218",
-    "zod": "^3.25.56"
+    "zod": "^4.0.0"
   },
   "peerDependencies": {
     "@opencode-ai/plugin": "^1.0.0"

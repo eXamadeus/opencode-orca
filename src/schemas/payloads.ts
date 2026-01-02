@@ -9,7 +9,7 @@ export const TaskPayloadSchema = z
   .object({
     agent_id: AgentIdSchema,
     prompt: z.string().min(1),
-    context: z.record(z.unknown()).optional(),
+    context: z.record(z.string(), z.unknown()).optional(),
     parent_session_id: SessionIdSchema.optional(),
   })
   .strict()

@@ -26,8 +26,5 @@ npm-debug.log*
 # Test coverage
 coverage/
 
-# Bun
-bun.lock
-
 # Worktrees
 worktrees/
