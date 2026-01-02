@@ -129,3 +129,24 @@ export type {
   TaskMessage,
   UserInputMessage,
 } from './schemas/messages'
+
+// -----------------------------------------------------------------------------
+// Dispatch and validation (for advanced usage)
+// -----------------------------------------------------------------------------
+
+export { dispatchToAgent, type DispatchContext } from './plugin/dispatch'
+
+export {
+  createFailureMessage,
+  formatZodErrors,
+  validateMessage,
+  validateWithRetry,
+  wrapAsResultMessage,
+  type ValidationResult,
+} from './plugin/validation'
+
+export {
+  DEFAULT_VALIDATION_CONFIG,
+  resolveValidationConfig,
+  type ValidationConfig,
+} from './plugin/types'

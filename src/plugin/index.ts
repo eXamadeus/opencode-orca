@@ -1,7 +1,9 @@
-import type { Plugin } from '@opencode-ai/plugin'
+import { type Plugin, tool } from '@opencode-ai/plugin'
 import type { AgentConfig as OpenCodeAgentConfig } from '@opencode-ai/sdk'
 import { DEFAULT_AGENTS, mergeAgentConfigs } from './agents'
-import { type AgentConfig, loadUserConfig } from './config'
+import { type AgentConfig, type OrcaSettings, loadUserConfig } from './config'
+import { type DispatchContext, dispatchToAgent } from './dispatch'
+import { resolveValidationConfig } from './types'
 
 /**
  * Convert our AgentConfig to OpenCode's AgentConfig format
@@ -19,7 +21,7 @@ function toOpenCodeAgentConfig(config: AgentConfig): OpenCodeAgentConfig {
  */
 export const createOrcaPlugin = (): Plugin => {
   return async (input) => {
-    const { directory } = input
+    const { client, directory } = input
 
     // Load user config (graceful fallback if missing)
     let userConfig: Awaited<ReturnType<typeof loadUserConfig>>
@@ -36,6 +38,9 @@ export const createOrcaPlugin = (): Plugin => {
     // Merge default agents with user overrides/additions
     const agents = mergeAgentConfigs(DEFAULT_AGENTS, userConfig?.agents)
 
+    // Resolve validation config from user settings
+    const validationConfig = resolveValidationConfig(userConfig?.settings)
+
     return {
       /**
        * Config hook - injects Orca agent definitions into OpenCode
@@ -51,11 +56,49 @@ export const createOrcaPlugin = (): Plugin => {
       },
 
       /**
-       * Tool definitions will be added in future stories:
-       * - orca_dispatch: Route messages between agents
+       * Tool definitions for Orca agent orchestration
        */
       tool: {
-        // orca_dispatch will be implemented in the Plugin Tool story
+        /**
+         * orca_dispatch - Route a task message to a specialist agent
+         *
+         * This tool enables the Orca orchestrator to dispatch typed messages
+         * to specialist agents with validation, retry logic, and graceful degradation.
+         */
+        orca_dispatch: tool({
+          description:
+            'Route a task message to a specialist agent. Input must be a JSON TaskMessage envelope with type, session_id, timestamp, and payload (agent_id, prompt, context?, parent_session_id?).',
+          args: {
+            message: tool.schema.string().describe('JSON TaskMessage envelope to dispatch'),
+          },
+          async execute(args, ctx) {
+            const dispatchCtx: DispatchContext = {
+              client,
+              agents,
+              validationConfig,
+              abort: ctx.abort,
+            }
+
+            return dispatchToAgent(args.message, dispatchCtx)
+          },
+        }),
+      },
+
+      /**
+       * HITL hooks for observability and future approval gates
+       */
+      'tool.execute.before': async (input, output) => {
+        if (input.tool === 'orca_dispatch') {
+          // Log dispatch request for observability
+          console.log(`[opencode-orca] Dispatching: session=${input.sessionID}`)
+        }
+      },
+
+      'tool.execute.after': async (input, output) => {
+        if (input.tool === 'orca_dispatch') {
+          // Log dispatch result for observability
+          console.log(`[opencode-orca] Dispatch complete: session=${input.sessionID}`)
+        }
       },
     }
   }

@@ -1,0 +1,29 @@
+import type { OrcaSettings } from './config'
+
+/**
+ * Validation configuration for message handling
+ */
+export interface ValidationConfig {
+  /** Max retries for validation failures before returning error (default: 2) */
+  maxRetries: number
+  /** Wrap plain text responses as ResultMessage envelopes (default: true) */
+  wrapPlainText: boolean
+}
+
+/**
+ * Default validation configuration
+ */
+export const DEFAULT_VALIDATION_CONFIG: ValidationConfig = {
+  maxRetries: 2,
+  wrapPlainText: true,
+}
+
+/**
+ * Resolve validation config from user settings with defaults
+ */
+export function resolveValidationConfig(settings?: OrcaSettings): ValidationConfig {
+  return {
+    maxRetries: settings?.validation?.maxRetries ?? DEFAULT_VALIDATION_CONFIG.maxRetries,
+    wrapPlainText: settings?.validation?.wrapPlainText ?? DEFAULT_VALIDATION_CONFIG.wrapPlainText,
+  }
+}

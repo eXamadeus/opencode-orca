@@ -100,7 +100,7 @@ export const OrcaUserConfigSchema = z
 
 export type OrcaUserConfig = z.infer<typeof OrcaUserConfigSchema>
 
-/** Path to user config file relative to project root */
+/** Path to the user config file relative to the project root */
 export const USER_CONFIG_PATH = '.opencode/orca.json'
 
 /**
@@ -108,7 +108,7 @@ export const USER_CONFIG_PATH = '.opencode/orca.json'
  *
  * @param directory - Project root directory
  * @returns Validated user config, or undefined if file doesn't exist
- * @throws Error if file exists but is invalid JSON or fails validation
+ * @throws Error if a file exists but is invalid JSON or fails validation
  */
 export async function loadUserConfig(directory: string): Promise<OrcaUserConfig | undefined> {
   const configPath = join(directory, USER_CONFIG_PATH)
