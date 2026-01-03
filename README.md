@@ -25,10 +25,82 @@ Or manually add to your `opencode.json`:
 }
 ```
 
+## Configuration
+
+Create `.opencode/orca.json` to customize behavior:
+
+```json
+{
+  "settings": {
+    "autonomy": "assisted",
+    "defaultModel": "claude-sonnet-4-20250514"
+  },
+  "agents": {
+    "coder": {
+      "model": "claude-sonnet-4-20250514",
+      "temperature": 0.3
+    }
+  }
+}
+```
+
+### Autonomy Levels
+
+Control how much human oversight is required during orchestration:
+
+| Level        | Description       | Behavior                                                                                                    |
+|--------------|-------------------|-------------------------------------------------------------------------------------------------------------|
+| `supervised` | Maximum oversight | All significant actions require approval. Dangerous operations blocked.                                     |
+| `assisted`   | Balanced          | Routine operations auto-approved. Significant actions require approval. Auto-retries on transient failures. |
+| `autonomous` | Minimal gates     | Most operations auto-approved. Only dangerous operations require approval.                                  |
+
+**Action Classifications:**
+
+- **Routine**: Research, reviews, questions - low risk operations
+- **Significant**: Coding, testing, document writing - operations that modify state
+- **Dangerous**: Destructive patterns like `delete`, `rm -rf`, `--force`, `reset --hard`
+
+**Gate Decision Matrix:**
+
+| Autonomy Level | Routine  | Significant | Dangerous |
+|----------------|----------|-------------|-----------|
+| supervised     | approval | approval    | block     |
+| assisted       | proceed  | approval    | block     |
+| autonomous     | proceed  | proceed     | approval  |
+
+### Example Configurations
+
+**Supervised mode (default)** - for critical production work:
+```json
+{
+  "settings": {
+    "autonomy": "supervised"
+  }
+}
+```
+
+**Assisted mode** - for typical development:
+```json
+{
+  "settings": {
+    "autonomy": "assisted"
+  }
+}
+```
+
+**Autonomous mode** - for rapid prototyping (use with caution):
+```json
+{
+  "settings": {
+    "autonomy": "autonomous"
+  }
+}
+```
+
 ## Architecture
 
 ```
-User Inputa
+User Input
     │
     ▼
   Orca (Orchestrator)
@@ -42,6 +114,30 @@ User Inputa
          ├── Researcher
          ├── Document Writer
          └── Architect
+```
+
+### Autonomy Flow
+
+```
+Task Message
+    │
+    ▼
+┌─────────────────────┐
+│ Classify Action     │ → routine / significant / dangerous
+└─────────────────────┘
+    │
+    ▼
+┌─────────────────────┐
+│ Determine Gate      │ → proceed / require_approval / block
+└─────────────────────┘
+    │
+    ├── [proceed] ──────────► Execute dispatch
+    │
+    ├── [require_approval] ─► Return escalation message
+    │                         (Orca presents to user)
+    │
+    └── [block] ────────────► Return failure message
+                              (Operation not permitted)
 ```
 
 ## Development

@@ -150,3 +150,34 @@ export {
   resolveValidationConfig,
   type ValidationConfig,
 } from './plugin/types'
+
+// -----------------------------------------------------------------------------
+// Autonomy (for autonomy level enforcement)
+// -----------------------------------------------------------------------------
+
+export {
+  classifyAction,
+  DEFAULT_AUTONOMY_CONFIG,
+  DEFAULT_AUTONOMY_LEVEL,
+  determineGate,
+  resolveAutonomyConfig,
+  resolveAutonomyLevel,
+  type ActionClassification,
+  type AutonomyConfig,
+  type GateDecision,
+} from './plugin/autonomy'
+
+export {
+  enforcePreDispatchGate,
+  transformResponse,
+  type GateContext,
+  type PreDispatchResult,
+} from './plugin/gates'
+
+export {
+  executeWithRetry,
+  shouldAutoRetry,
+  type RetryContext,
+  type RetryDecision,
+  type RetryExecutor,
+} from './plugin/retry'

@@ -1,8 +1,12 @@
 import type { OpencodeClient, Part } from '@opencode-ai/sdk'
 import { ErrorCode } from '../schemas/errors'
-import type { MessageEnvelope, TaskMessage } from '../schemas/messages'
+import type { FailureMessage, MessageEnvelope, TaskMessage } from '../schemas/messages'
 import { TaskMessageSchema } from '../schemas/messages'
+import type { AutonomyConfig } from './autonomy'
+import { classifyAction, DEFAULT_AUTONOMY_CONFIG, determineGate } from './autonomy'
 import type { AgentConfig } from './config'
+import { enforcePreDispatchGate, transformResponse } from './gates'
+import { executeWithRetry } from './retry'
 import type { ValidationConfig } from './types'
 import { createFailureMessage, validateWithRetry } from './validation'
 
@@ -16,6 +20,8 @@ export interface DispatchContext {
   agents: Record<string, AgentConfig>
   /** Validation configuration */
   validationConfig: ValidationConfig
+  /** Autonomy configuration */
+  autonomyConfig: AutonomyConfig
   /** Abort signal for cancellation */
   abort?: AbortSignal
 }
@@ -51,13 +57,87 @@ function extractTextFromParts(parts: Part[]): string {
 }
 
 /**
+ * Execute the actual dispatch to an agent (internal helper)
+ * This is separated to allow retry logic to wrap the core dispatch
+ */
+async function executeDispatch(task: TaskMessage, ctx: DispatchContext): Promise<MessageEnvelope> {
+  const { agent_id: targetAgentId, prompt, parent_session_id } = task.payload
+
+  // Create or use existing session
+  let sessionId: string
+
+  if (parent_session_id) {
+    sessionId = parent_session_id
+  } else {
+    const createResult = await ctx.client.session.create({})
+
+    if (!createResult.data?.id) {
+      return createFailureMessage(
+        ErrorCode.SESSION_NOT_FOUND,
+        'Failed to create session',
+        'Session creation returned no ID',
+      )
+    }
+
+    sessionId = createResult.data.id
+  }
+
+  // Send prompt to agent
+  const promptResult = await ctx.client.session.prompt({
+    path: { id: sessionId },
+    body: {
+      agent: targetAgentId,
+      parts: [{ type: 'text', text: prompt }],
+    },
+  })
+
+  // Extract response text from parts
+  const responseParts = promptResult.data?.parts ?? []
+  const responseText = extractTextFromParts(responseParts)
+
+  if (!responseText) {
+    return createFailureMessage(
+      ErrorCode.AGENT_ERROR,
+      'Agent returned empty response',
+      `Agent ${targetAgentId} produced no text output`,
+    )
+  }
+
+  // Validate response with retry logic
+  return validateWithRetry(
+    responseText,
+    targetAgentId,
+    ctx.validationConfig,
+    // Retry sender: re-prompt the agent with correction
+    async (correctionPrompt) => {
+      const retryResult = await ctx.client.session.prompt({
+        path: { id: sessionId },
+        body: {
+          agent: targetAgentId,
+          parts: [{ type: 'text', text: correctionPrompt }],
+        },
+      })
+
+      const retryParts = retryResult.data?.parts ?? []
+      return extractTextFromParts(retryParts)
+    },
+  )
+}
+
+/**
  * Dispatch a task message to a specialist agent
+ *
+ * Enforces autonomy gates before dispatch and handles retry logic
+ * for failures based on the current autonomy level.
  *
  * @param messageJson - JSON string of TaskMessage envelope
  * @param ctx - Dispatch context with client, agents, and config
  * @returns JSON string of response MessageEnvelope
  */
 export async function dispatchToAgent(messageJson: string, ctx: DispatchContext): Promise<string> {
+  // Use default autonomy config if not provided
+  const autonomyConfig = ctx.autonomyConfig ?? DEFAULT_AUTONOMY_CONFIG
+
   // Parse the incoming task message
   const task = parseTaskMessage(messageJson)
   if (!task) {
@@ -70,7 +150,7 @@ export async function dispatchToAgent(messageJson: string, ctx: DispatchContext)
     )
   }
 
-  const { agent_id: targetAgentId, prompt, parent_session_id } = task.payload
+  const { agent_id: targetAgentId } = task.payload
 
   // Verify target agent exists
   if (!ctx.agents[targetAgentId]) {
@@ -83,74 +163,44 @@ export async function dispatchToAgent(messageJson: string, ctx: DispatchContext)
     )
   }
 
+  // === AUTONOMY GATE CHECK ===
+  // Classify the action and determine gate decision
+  const classification = classifyAction(task, ctx.agents)
+  const decision = determineGate(autonomyConfig.level, classification)
+
+  // Enforce pre-dispatch gate
+  const gateResult = enforcePreDispatchGate({
+    task,
+    autonomyLevel: autonomyConfig.level,
+    classification,
+    decision,
+  })
+
+  if (!gateResult.allowed) {
+    // Gate blocked the dispatch - return the gate response
+    return JSON.stringify(gateResult.response)
+  }
+
+  // === EXECUTE DISPATCH ===
   try {
-    // Create or use existing session
-    let sessionId: string
+    let result = await executeDispatch(task, ctx)
 
-    if (parent_session_id) {
-      // Use existing parent session
-      sessionId = parent_session_id
-    } else {
-      // Create new session
-      const createResult = await ctx.client.session.create({})
-
-      if (!createResult.data?.id) {
-        return JSON.stringify(
-          createFailureMessage(
-            ErrorCode.SESSION_NOT_FOUND,
-            'Failed to create session',
-            'Session creation returned no ID',
-          ),
-        )
-      }
-
-      sessionId = createResult.data.id
-    }
-
-    // Send prompt to agent
-    const promptResult = await ctx.client.session.prompt({
-      path: { id: sessionId },
-      body: {
-        agent: targetAgentId,
-        parts: [{ type: 'text', text: prompt }],
-      },
-    })
-
-    // Extract response text from parts
-    const responseParts = promptResult.data?.parts ?? []
-    const responseText = extractTextFromParts(responseParts)
-
-    if (!responseText) {
-      return JSON.stringify(
-        createFailureMessage(
-          ErrorCode.AGENT_ERROR,
-          'Agent returned empty response',
-          `Agent ${targetAgentId} produced no text output`,
-        ),
+    // === RETRY LOGIC FOR FAILURES ===
+    // In assisted/autonomous mode, auto-retry transient failures
+    if (result.type === 'failure') {
+      result = await executeWithRetry(
+        result as FailureMessage,
+        autonomyConfig.level,
+        autonomyConfig.maxRetries,
+        () => executeDispatch(task, ctx),
       )
     }
 
-    // Validate response with retry logic
-    const validatedMessage = await validateWithRetry(
-      responseText,
-      targetAgentId,
-      ctx.validationConfig,
-      // Retry sender: re-prompt the agent with correction
-      async (correctionPrompt) => {
-        const retryResult = await ctx.client.session.prompt({
-          path: { id: sessionId },
-          body: {
-            agent: targetAgentId,
-            parts: [{ type: 'text', text: correctionPrompt }],
-          },
-        })
+    // === RESPONSE TRANSFORMATION ===
+    // Transform response based on autonomy level if needed
+    const transformedResult = transformResponse(result, autonomyConfig.level, classification)
 
-        const retryParts = retryResult.data?.parts ?? []
-        return extractTextFromParts(retryParts)
-      },
-    )
-
-    return JSON.stringify(validatedMessage)
+    return JSON.stringify(transformedResult)
   } catch (err) {
     // Check for abort/timeout
     if (ctx.abort?.aborted) {

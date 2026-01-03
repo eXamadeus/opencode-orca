@@ -9,6 +9,8 @@ export const ErrorCode = {
   SESSION_NOT_FOUND: 'SESSION_NOT_FOUND',
   AGENT_ERROR: 'AGENT_ERROR',
   TIMEOUT: 'TIMEOUT',
+  AUTONOMY_BLOCKED: 'AUTONOMY_BLOCKED',
+  APPROVAL_REQUIRED: 'APPROVAL_REQUIRED',
 } as const
 
 export const ErrorCodeSchema = z.enum([
@@ -17,6 +19,8 @@ export const ErrorCodeSchema = z.enum([
   'SESSION_NOT_FOUND',
   'AGENT_ERROR',
   'TIMEOUT',
+  'AUTONOMY_BLOCKED',
+  'APPROVAL_REQUIRED',
 ])
 
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>

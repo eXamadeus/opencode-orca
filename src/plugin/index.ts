@@ -1,6 +1,7 @@
 import { type Plugin, tool } from '@opencode-ai/plugin'
 import type { AgentConfig as OpenCodeAgentConfig } from '@opencode-ai/sdk'
 import { DEFAULT_AGENTS, mergeAgentConfigs } from './agents'
+import { resolveAutonomyConfig } from './autonomy'
 import { type AgentConfig, type OrcaSettings, loadUserConfig } from './config'
 import { type DispatchContext, dispatchToAgent } from './dispatch'
 import { resolveValidationConfig } from './types'
@@ -41,6 +42,9 @@ export const createOrcaPlugin = (): Plugin => {
     // Resolve validation config from user settings
     const validationConfig = resolveValidationConfig(userConfig?.settings)
 
+    // Resolve autonomy config from user settings
+    const autonomyConfig = resolveAutonomyConfig(userConfig?.settings)
+
     return {
       /**
        * Config hook - injects Orca agent definitions into OpenCode
@@ -76,6 +80,7 @@ export const createOrcaPlugin = (): Plugin => {
               client,
               agents,
               validationConfig,
+              autonomyConfig,
               abort: ctx.abort,
             }
 
@@ -85,19 +90,37 @@ export const createOrcaPlugin = (): Plugin => {
       },
 
       /**
-       * HITL hooks for observability and future approval gates
+       * HITL hooks for observability and autonomy enforcement logging
        */
-      'tool.execute.before': async (input, output) => {
+      'tool.execute.before': async (input, _output) => {
         if (input.tool === 'orca_dispatch') {
-          // Log dispatch request for observability
-          console.log(`[opencode-orca] Dispatching: session=${input.sessionID}`)
+          // Log dispatch request with autonomy context for observability
+          console.log(
+            `[opencode-orca] Dispatching: session=${input.sessionID} autonomy=${autonomyConfig.level}`,
+          )
         }
       },
 
       'tool.execute.after': async (input, output) => {
         if (input.tool === 'orca_dispatch') {
-          // Log dispatch result for observability
-          console.log(`[opencode-orca] Dispatch complete: session=${input.sessionID}`)
+          // Parse result to determine outcome
+          let outcome = 'unknown'
+          try {
+            const result = JSON.parse(output.output)
+            if (result.type === 'failure') {
+              outcome = `failure:${result.payload?.code ?? 'unknown'}`
+            } else if (result.type === 'escalation') {
+              outcome = 'escalation:approval_required'
+            } else {
+              outcome = `success:${result.type}`
+            }
+          } catch {
+            outcome = 'parse_error'
+          }
+
+          console.log(
+            `[opencode-orca] Dispatch complete: session=${input.sessionID} outcome=${outcome}`,
+          )
         }
       },
     }

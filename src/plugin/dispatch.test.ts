@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 import type { OpencodeClient } from '@opencode-ai/sdk'
 import type { TaskMessage } from '../schemas/messages'
+import { DEFAULT_AUTONOMY_CONFIG } from './autonomy'
 import { type DispatchContext, dispatchToAgent } from './dispatch'
 import { DEFAULT_VALIDATION_CONFIG } from './types'
 
@@ -67,11 +68,15 @@ describe('dispatchToAgent', () => {
     researcher: { mode: 'subagent' as const, description: 'Researches things' },
   }
 
+  // Use autonomous mode for most tests to avoid gate interference
+  const autonomousConfig = { ...DEFAULT_AUTONOMY_CONFIG, level: 'autonomous' as const }
+
   test('returns failure for invalid task message format', async () => {
     const ctx: DispatchContext = {
       client: createMockClient({}),
       agents: testAgents,
       validationConfig: DEFAULT_VALIDATION_CONFIG,
+      autonomyConfig: autonomousConfig,
     }
 
     const result = await dispatchToAgent('not valid json', ctx)
@@ -86,6 +91,7 @@ describe('dispatchToAgent', () => {
       client: createMockClient({}),
       agents: testAgents,
       validationConfig: DEFAULT_VALIDATION_CONFIG,
+      autonomyConfig: autonomousConfig,
     }
 
     const result = await dispatchToAgent(createTaskMessage({ agent_id: 'unknown-agent' }), ctx)
@@ -102,6 +108,7 @@ describe('dispatchToAgent', () => {
       client: createMockClient({ createSessionError: true }),
       agents: testAgents,
       validationConfig: DEFAULT_VALIDATION_CONFIG,
+      autonomyConfig: autonomousConfig,
     }
 
     const result = await dispatchToAgent(createTaskMessage(), ctx)
@@ -123,6 +130,7 @@ describe('dispatchToAgent', () => {
       client: mockClient,
       agents: testAgents,
       validationConfig: DEFAULT_VALIDATION_CONFIG,
+      autonomyConfig: autonomousConfig,
     }
 
     const result = await dispatchToAgent(createTaskMessage(), ctx)
@@ -138,6 +146,7 @@ describe('dispatchToAgent', () => {
       client: createMockClient({ promptResponse: 'Here is my plain text response' }),
       agents: testAgents,
       validationConfig: { maxRetries: 2, wrapPlainText: true },
+      autonomyConfig: autonomousConfig,
     }
 
     const result = await dispatchToAgent(createTaskMessage(), ctx)
@@ -163,6 +172,7 @@ describe('dispatchToAgent', () => {
       client: createMockClient({ promptResponse: validResponse }),
       agents: testAgents,
       validationConfig: { maxRetries: 2, wrapPlainText: false },
+      autonomyConfig: autonomousConfig,
     }
 
     const result = await dispatchToAgent(createTaskMessage(), ctx)
@@ -177,6 +187,7 @@ describe('dispatchToAgent', () => {
       client: createMockClient({ promptError: new Error('Agent crashed') }),
       agents: testAgents,
       validationConfig: DEFAULT_VALIDATION_CONFIG,
+      autonomyConfig: autonomousConfig,
     }
 
     const result = await dispatchToAgent(createTaskMessage(), ctx)
@@ -204,6 +215,7 @@ describe('dispatchToAgent', () => {
       client: mockClient,
       agents: testAgents,
       validationConfig: DEFAULT_VALIDATION_CONFIG,
+      autonomyConfig: autonomousConfig,
       abort: abortController.signal,
     }
 
@@ -242,6 +254,7 @@ describe('dispatchToAgent', () => {
       client: mockClient,
       agents: testAgents,
       validationConfig: { maxRetries: 2, wrapPlainText: true },
+      autonomyConfig: autonomousConfig,
     }
 
     const taskWithParent = createTaskMessage({
