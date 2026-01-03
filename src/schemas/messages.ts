@@ -18,7 +18,7 @@ import {
 export const TaskMessageSchema = BaseEnvelopeSchema.extend({
   type: z.literal('task'),
   payload: TaskPayloadSchema,
-}).strict()
+})
 
 export type TaskMessage = z.infer<typeof TaskMessageSchema>
 
@@ -28,7 +28,7 @@ export type TaskMessage = z.infer<typeof TaskMessageSchema>
 export const ResultMessageSchema = BaseEnvelopeSchema.extend({
   type: z.literal('result'),
   payload: ResultPayloadSchema,
-}).strict()
+})
 
 export type ResultMessage = z.infer<typeof ResultMessageSchema>
 
@@ -38,7 +38,7 @@ export type ResultMessage = z.infer<typeof ResultMessageSchema>
 export const PlanMessageSchema = BaseEnvelopeSchema.extend({
   type: z.literal('plan'),
   payload: PlanPayloadSchema,
-}).strict()
+})
 
 export type PlanMessage = z.infer<typeof PlanMessageSchema>
 
@@ -48,7 +48,7 @@ export type PlanMessage = z.infer<typeof PlanMessageSchema>
 export const AnswerMessageSchema = BaseEnvelopeSchema.extend({
   type: z.literal('answer'),
   payload: AnswerPayloadSchema,
-}).strict()
+})
 
 export type AnswerMessage = z.infer<typeof AnswerMessageSchema>
 
@@ -58,7 +58,7 @@ export type AnswerMessage = z.infer<typeof AnswerMessageSchema>
 export const QuestionMessageSchema = BaseEnvelopeSchema.extend({
   type: z.literal('question'),
   payload: QuestionPayloadSchema,
-}).strict()
+})
 
 export type QuestionMessage = z.infer<typeof QuestionMessageSchema>
 
@@ -68,7 +68,7 @@ export type QuestionMessage = z.infer<typeof QuestionMessageSchema>
 export const EscalationMessageSchema = BaseEnvelopeSchema.extend({
   type: z.literal('escalation'),
   payload: EscalationPayloadSchema,
-}).strict()
+})
 
 export type EscalationMessage = z.infer<typeof EscalationMessageSchema>
 
@@ -78,7 +78,7 @@ export type EscalationMessage = z.infer<typeof EscalationMessageSchema>
 export const UserInputMessageSchema = BaseEnvelopeSchema.extend({
   type: z.literal('user_input'),
   payload: UserInputPayloadSchema,
-}).strict()
+})
 
 export type UserInputMessage = z.infer<typeof UserInputMessageSchema>
 
@@ -88,7 +88,7 @@ export type UserInputMessage = z.infer<typeof UserInputMessageSchema>
 export const InterruptMessageSchema = BaseEnvelopeSchema.extend({
   type: z.literal('interrupt'),
   payload: InterruptPayloadSchema,
-}).strict()
+})
 
 export type InterruptMessage = z.infer<typeof InterruptMessageSchema>
 
@@ -98,7 +98,7 @@ export type InterruptMessage = z.infer<typeof InterruptMessageSchema>
 export const FailureMessageSchema = BaseEnvelopeSchema.extend({
   type: z.literal('failure'),
   payload: FailurePayloadSchema,
-}).strict()
+})
 
 export type FailureMessage = z.infer<typeof FailureMessageSchema>
 

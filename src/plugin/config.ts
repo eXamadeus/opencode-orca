@@ -15,20 +15,18 @@ export type AutonomyLevel = z.infer<typeof AutonomyLevelSchema>
 /**
  * Permission settings for agent actions
  */
-export const PermissionConfigSchema = z
-  .object({
-    edit: z.enum(['ask', 'allow', 'deny']).optional(),
-    bash: z
-      .union([
-        z.enum(['ask', 'allow', 'deny']),
-        z.record(z.string(), z.enum(['ask', 'allow', 'deny'])),
-      ])
-      .optional(),
-    webfetch: z.enum(['ask', 'allow', 'deny']).optional(),
-    doom_loop: z.enum(['ask', 'allow', 'deny']).optional(),
-    external_directory: z.enum(['ask', 'allow', 'deny']).optional(),
-  })
-  .strict()
+export const PermissionConfigSchema = z.strictObject({
+  edit: z.enum(['ask', 'allow', 'deny']).optional(),
+  bash: z
+    .union([
+      z.enum(['ask', 'allow', 'deny']),
+      z.record(z.string(), z.enum(['ask', 'allow', 'deny'])),
+    ])
+    .optional(),
+  webfetch: z.enum(['ask', 'allow', 'deny']).optional(),
+  doom_loop: z.enum(['ask', 'allow', 'deny']).optional(),
+  external_directory: z.enum(['ask', 'allow', 'deny']).optional(),
+})
 
 export type PermissionConfig = z.infer<typeof PermissionConfigSchema>
 
@@ -36,48 +34,43 @@ export type PermissionConfig = z.infer<typeof PermissionConfigSchema>
  * Agent configuration that can be provided by users
  * Matches OpenCode's AgentConfig structure
  */
-export const AgentConfigSchema = z
-  .object({
-    model: z.string().optional(),
-    temperature: z.number().min(0).max(2).optional(),
-    top_p: z.number().min(0).max(1).optional(),
-    prompt: z.string().optional(),
-    tools: z.record(z.string(), z.boolean()).optional(),
-    disable: z.boolean().optional(),
-    description: z.string().optional(),
-    mode: z.enum(['subagent', 'primary', 'all']).optional(),
-    color: z
-      .string()
-      .regex(/^#[0-9A-Fa-f]{6}$/)
-      .optional(),
-    maxSteps: z.number().int().positive().optional(),
-    permission: PermissionConfigSchema.optional(),
-  })
-  .strict()
+export const AgentConfigSchema = z.looseObject({
+  model: z.string().optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  top_p: z.number().min(0).max(1).optional(),
+  prompt: z.string().optional(),
+  tools: z.record(z.string(), z.boolean()).optional(),
+  disable: z.boolean().optional(),
+  description: z.string().optional(),
+  mode: z.enum(['subagent', 'primary', 'all']).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
+  maxSteps: z.number().int().positive().optional(),
+  permission: PermissionConfigSchema.optional(),
+})
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>
 
 /**
  * Orca-specific settings
  */
-export const OrcaSettingsSchema = z
-  .object({
-    /** Default autonomy level for all agents */
-    autonomy: AutonomyLevelSchema.optional(),
-    /** Default model for agents that don't specify one */
-    defaultModel: z.string().optional(),
-    /** Validation settings */
-    validation: z
-      .object({
-        /** Max retries for message validation failures (default: 3) */
-        maxRetries: z.number().int().min(0).max(10).optional(),
-        /** Wrap plain text responses in result messages (default: true) */
-        wrapPlainText: z.boolean().optional(),
-      })
-      .strict()
-      .optional(),
-  })
-  .strict()
+export const OrcaSettingsSchema = z.strictObject({
+  /** Default autonomy level for all agents */
+  autonomy: AutonomyLevelSchema.optional(),
+  /** Default model for agents that don't specify one */
+  defaultModel: z.string().optional(),
+  /** Validation settings */
+  validation: z
+    .strictObject({
+      /** Max retries for message validation failures (default: 3) */
+      maxRetries: z.number().int().min(0).max(10).optional(),
+      /** Wrap plain text responses in result messages (default: true) */
+      wrapPlainText: z.boolean().optional(),
+    })
+    .optional(),
+})
 
 export type OrcaSettings = z.infer<typeof OrcaSettingsSchema>
 
@@ -89,14 +82,12 @@ export type OrcaSettings = z.infer<typeof OrcaSettingsSchema>
  * - Adding completely new custom agents (full configs)
  * - Global Orca settings (autonomy level, default model)
  */
-export const OrcaUserConfigSchema = z
-  .object({
-    /** Agent configurations - overrides or new agents */
-    agents: z.record(z.string(), AgentConfigSchema).optional(),
-    /** Global Orca settings */
-    settings: OrcaSettingsSchema.optional(),
-  })
-  .strict()
+export const OrcaUserConfigSchema = z.strictObject({
+  /** Agent configurations - overrides or new agents */
+  agents: z.record(z.string(), AgentConfigSchema).optional(),
+  /** Global Orca settings */
+  settings: OrcaSettingsSchema.optional(),
+})
 
 export type OrcaUserConfig = z.infer<typeof OrcaUserConfigSchema>
 

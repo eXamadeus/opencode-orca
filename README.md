@@ -28,7 +28,7 @@ Or manually add to your `opencode.json`:
 ## Architecture
 
 ```
-User Input
+User Inputa
     │
     ▼
   Orca (Orchestrator)

@@ -77,13 +77,18 @@ describe('config schemas', () => {
       expect(() => AgentConfigSchema.parse({ temperature: 3 })).toThrow()
     })
 
-    test('rejects extra fields (strict mode)', () => {
-      expect(() =>
-        AgentConfigSchema.parse({
-          model: 'test',
-          unknown_field: 'value',
-        }),
-      ).toThrow()
+    test('allows pass-through provider options (loose mode)', () => {
+      // AgentConfigSchema uses looseObject to allow provider-specific options
+      // like reasoningEffort, textVerbosity, etc. to pass through to the SDK
+      const config = {
+        model: 'openai/o1',
+        reasoningEffort: 'high',
+        customProviderOption: 'value',
+      }
+      const result = AgentConfigSchema.parse(config)
+      expect(result).toEqual(config)
+      expect(result.reasoningEffort).toBe('high')
+      expect(result.customProviderOption).toBe('value')
     })
   })
 

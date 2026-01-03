@@ -21,11 +21,9 @@ export type AgentId = z.infer<typeof AgentIdSchema>
 /**
  * Base envelope fields shared by all messages
  */
-export const BaseEnvelopeSchema = z
-  .object({
-    session_id: SessionIdSchema,
-    timestamp: TimestampSchema,
-  })
-  .strict()
+export const BaseEnvelopeSchema = z.strictObject({
+  session_id: SessionIdSchema,
+  timestamp: TimestampSchema,
+})
 
 export type BaseEnvelope = z.infer<typeof BaseEnvelopeSchema>
