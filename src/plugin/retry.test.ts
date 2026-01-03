@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test'
 import type { FailureMessage, ResultMessage } from '../schemas/messages'
 import type { AutonomyLevel } from './config'
-import { executeWithRetry, type RetryContext, shouldAutoRetry } from './retry'
+import { type RetryContext, executeWithRetry, shouldAutoRetry } from './retry'
 
 /**
  * Create a failure message for testing

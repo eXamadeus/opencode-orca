@@ -3,10 +3,10 @@ import type { TaskMessage } from '../schemas/messages'
 import {
   type ActionClassification,
   type AutonomyConfig,
-  type GateDecision,
-  classifyAction,
   DEFAULT_AUTONOMY_CONFIG,
   DEFAULT_AUTONOMY_LEVEL,
+  type GateDecision,
+  classifyAction,
   determineGate,
   resolveAutonomyConfig,
   resolveAutonomyLevel,

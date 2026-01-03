@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import type { ResultMessage, TaskMessage } from '../schemas/messages'
 import type { ActionClassification, GateDecision } from './autonomy'
 import type { AutonomyLevel } from './config'
-import { enforcePreDispatchGate, type GateContext, transformResponse } from './gates'
+import { type GateContext, enforcePreDispatchGate, transformResponse } from './gates'
 
 /**
  * Create a valid TaskMessage for testing
