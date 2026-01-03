@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Usage: bun run wt:rm <dirname>
 # Accepts folder name (feat-login) or full path
+# Resilient: always attempts cleanup regardless of worktree state
 
-set -euo pipefail
+set -uo pipefail
 
 DIRNAME="${1:?Usage: bun run wt:rm <dirname>}"
 
@@ -13,13 +14,25 @@ else
   WT_PATH="$DIRNAME"
 fi
 
-if [ ! -d "$WT_PATH" ]; then
-  echo "Error: Worktree not found at $WT_PATH"
-  exit 1
+echo "Cleaning up worktree: $WT_PATH"
+
+# Attempt git worktree removal (may fail if already removed or inconsistent)
+if git worktree remove "$WT_PATH" 2>/dev/null; then
+  echo "  ✓ Git worktree removed"
+else
+  echo "  - Git worktree not found or already removed"
 fi
 
-echo "Removing worktree: $WT_PATH"
-git worktree remove "$WT_PATH"
+# Prune stale worktree records
 git worktree prune
+echo "  ✓ Stale worktrees pruned"
 
-echo "Worktree removed and pruned"
+# Always attempt directory removal to prevent orphans
+if [ -d "$WT_PATH" ]; then
+  rm -rf "$WT_PATH"
+  echo "  ✓ Directory removed: $WT_PATH"
+else
+  echo "  - Directory already gone: $WT_PATH"
+fi
+
+echo "Cleanup complete"
