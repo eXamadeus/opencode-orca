@@ -146,8 +146,8 @@ gh extension install yahsan2/gh-sub-issue
 - Progress bar shows automatically on the epic in GitHub
 
 ### Labels (defined in github.json)
-| Label   | Purpose                       |
-| ------- | ----------------------------- |
+| Label     | Purpose                       |
+|-----------|-------------------------------|
 | `epic`    | Larger effort with sub-issues |
 | `bug`     | Something broken              |
 | `feature` | New functionality             |
@@ -155,7 +155,7 @@ gh extension install yahsan2/gh-sub-issue
 
 ### Project Board Statuses
 | Status      | Meaning               |
-| ----------- | --------------------- |
+|-------------|-----------------------|
 | Todo        | Not started           |
 | In Progress | Actively being worked |
 | Done        | Completed             |
