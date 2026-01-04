@@ -1,6 +1,6 @@
 {
   "settings": {
-    "autonomy": "supervised",
+    "defaultSupervised": false,
     "defaultModel": null,
     "validation": {
       "maxRetries": 3,
