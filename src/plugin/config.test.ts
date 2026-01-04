@@ -90,12 +90,23 @@ describe('config schemas', () => {
       expect(result.reasoningEffort).toBe('high')
       expect(result.customProviderOption).toBe('value')
     })
+
+    test('accepts supervised flag', () => {
+      expect(AgentConfigSchema.parse({ supervised: true })).toEqual({ supervised: true })
+      expect(AgentConfigSchema.parse({ supervised: false })).toEqual({ supervised: false })
+    })
+
+    test('allows supervised to be undefined (optional)', () => {
+      const config = { model: 'some-model' }
+      const result = AgentConfigSchema.parse(config)
+      expect(result.supervised).toBeUndefined()
+    })
   })
 
   describe('OrcaSettingsSchema', () => {
     test('accepts valid settings', () => {
       const settings = {
-        autonomy: 'assisted' as const,
+        defaultSupervised: true,
         defaultModel: 'anthropic/claude-sonnet-4-20250514',
       }
       expect(OrcaSettingsSchema.parse(settings)).toEqual(settings)
@@ -108,7 +119,7 @@ describe('config schemas', () => {
     test('rejects extra fields (strict mode)', () => {
       expect(() =>
         OrcaSettingsSchema.parse({
-          autonomy: 'supervised',
+          defaultSupervised: true,
           unknown: 'value',
         }),
       ).toThrow()
@@ -142,6 +153,19 @@ describe('config schemas', () => {
         }),
       ).toThrow()
     })
+
+    test('accepts defaultSupervised boolean', () => {
+      expect(OrcaSettingsSchema.parse({ defaultSupervised: true })).toEqual({
+        defaultSupervised: true,
+      })
+      expect(OrcaSettingsSchema.parse({ defaultSupervised: false })).toEqual({
+        defaultSupervised: false,
+      })
+    })
+
+    test('rejects old autonomy field', () => {
+      expect(() => OrcaSettingsSchema.parse({ autonomy: 'supervised' })).toThrow()
+    })
   })
 
   describe('OrcaUserConfigSchema', () => {
@@ -165,7 +189,7 @@ describe('config schemas', () => {
           },
         },
         settings: {
-          autonomy: 'assisted' as const,
+          defaultSupervised: false,
           defaultModel: 'anthropic/claude-sonnet-4-20250514',
         },
       }
@@ -183,7 +207,7 @@ describe('config schemas', () => {
 
     test('accepts config with only settings', () => {
       const config = {
-        settings: { autonomy: 'supervised' as const },
+        settings: { defaultSupervised: true },
       }
       expect(OrcaUserConfigSchema.parse(config)).toEqual(config)
     })

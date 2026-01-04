@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { BaseEnvelopeSchema } from './common'
 import {
   AnswerPayloadSchema,
+  CheckpointPayloadSchema,
   EscalationPayloadSchema,
   FailurePayloadSchema,
   InterruptPayloadSchema,
@@ -103,6 +104,16 @@ export const FailureMessageSchema = BaseEnvelopeSchema.extend({
 export type FailureMessage = z.infer<typeof FailureMessageSchema>
 
 /**
+ * Checkpoint message - Supervision checkpoint requiring user approval
+ */
+export const CheckpointMessageSchema = BaseEnvelopeSchema.extend({
+  type: z.literal('checkpoint'),
+  payload: CheckpointPayloadSchema,
+})
+
+export type CheckpointMessage = z.infer<typeof CheckpointMessageSchema>
+
+/**
  * Message envelope - Discriminated union of all message types
  */
 export const MessageEnvelopeSchema = z.discriminatedUnion('type', [
@@ -115,6 +126,7 @@ export const MessageEnvelopeSchema = z.discriminatedUnion('type', [
   UserInputMessageSchema,
   InterruptMessageSchema,
   FailureMessageSchema,
+  CheckpointMessageSchema,
 ])
 
 export type MessageEnvelope = z.infer<typeof MessageEnvelopeSchema>

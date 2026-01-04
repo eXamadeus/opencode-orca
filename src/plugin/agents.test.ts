@@ -64,12 +64,27 @@ describe('PROTOCOL_INJECTION', () => {
       'failure',
       'plan',
       'escalation',
+      'checkpoint',
       'interrupt',
       'user_input',
     ]
     for (const type of expectedTypes) {
       expect(PROTOCOL_INJECTION).toContain(`**${type}**`)
     }
+  })
+
+  test('documents checkpoint message type', () => {
+    expect(PROTOCOL_INJECTION).toContain('**checkpoint**')
+    expect(PROTOCOL_INJECTION).toContain('agent_id, prompt, step_index?, plan_goal?')
+  })
+})
+
+describe('Orca agent prompt', () => {
+  test('documents checkpoint handling for supervised agents', () => {
+    const orcaPrompt = DEFAULT_AGENTS.orca.prompt ?? ''
+    expect(orcaPrompt).toContain('Checkpoint Handling')
+    expect(orcaPrompt).toContain('supervised')
+    expect(orcaPrompt).toContain('approved_remaining')
   })
 
   test('includes JSON schema in expandable section', () => {

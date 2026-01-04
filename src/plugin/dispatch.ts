@@ -1,8 +1,8 @@
 import type { OpencodeClient, Part } from '@opencode-ai/sdk'
 import { ErrorCode } from '../schemas/errors'
-import type { MessageEnvelope, TaskMessage } from '../schemas/messages'
+import type { CheckpointMessage, TaskMessage } from '../schemas/messages'
 import { TaskMessageSchema } from '../schemas/messages'
-import type { AgentConfig } from './config'
+import type { AgentConfig, OrcaSettings } from './config'
 import type { ValidationConfig } from './types'
 import { createFailureMessage, validateWithRetry } from './validation'
 
@@ -16,6 +16,8 @@ export interface DispatchContext {
   agents: Record<string, AgentConfig>
   /** Validation configuration */
   validationConfig: ValidationConfig
+  /** Orca settings (for defaultSupervised) */
+  settings?: OrcaSettings
   /** Abort signal for cancellation */
   abort?: AbortSignal
 }
@@ -30,6 +32,43 @@ function parseTaskMessage(messageJson: string): TaskMessage | null {
     return result.success ? result.data : null
   } catch {
     return null
+  }
+}
+
+/**
+ * Determine if an agent requires supervision
+ *
+ * Resolution order:
+ * 1. Agent's explicit `supervised` setting (if defined)
+ * 2. Global `defaultSupervised` setting (if defined)
+ * 3. Default to false (no supervision)
+ */
+export function isAgentSupervised(
+  agentId: string,
+  agents: Record<string, AgentConfig>,
+  settings?: OrcaSettings,
+): boolean {
+  const agent = agents[agentId]
+  if (agent?.supervised !== undefined) {
+    return agent.supervised
+  }
+  return settings?.defaultSupervised ?? false
+}
+
+/**
+ * Create a checkpoint message for a supervised agent
+ */
+export function createCheckpointMessage(task: TaskMessage): CheckpointMessage {
+  return {
+    session_id: task.session_id,
+    timestamp: new Date().toISOString(),
+    type: 'checkpoint',
+    payload: {
+      agent_id: task.payload.agent_id,
+      prompt: task.payload.prompt,
+      step_index: task.payload.plan_context?.step_index,
+      plan_goal: task.payload.plan_context?.goal,
+    },
   }
 }
 
@@ -70,7 +109,7 @@ export async function dispatchToAgent(messageJson: string, ctx: DispatchContext)
     )
   }
 
-  const { agent_id: targetAgentId, prompt, parent_session_id } = task.payload
+  const { agent_id: targetAgentId, prompt, parent_session_id, plan_context } = task.payload
 
   // Verify target agent exists
   if (!ctx.agents[targetAgentId]) {
@@ -81,6 +120,15 @@ export async function dispatchToAgent(messageJson: string, ctx: DispatchContext)
         `Available agents: ${Object.keys(ctx.agents).join(', ')}`,
       ),
     )
+  }
+
+  // Check if agent requires supervision
+  const supervised = isAgentSupervised(targetAgentId, ctx.agents, ctx.settings)
+  const approvedRemaining = plan_context?.approved_remaining ?? false
+
+  // Return checkpoint if supervised and not pre-approved
+  if (supervised && !approvedRemaining) {
+    return JSON.stringify(createCheckpointMessage(task))
   }
 
   try {

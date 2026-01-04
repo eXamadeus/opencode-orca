@@ -4,15 +4,6 @@ import { join } from 'node:path'
 import { z } from 'zod'
 
 /**
- * Autonomy levels for Orca orchestration
- * - supervised: All actions require approval
- * - assisted: Routine actions auto-approved, significant actions require approval
- * - autonomous: All actions auto-approved (use with caution)
- */
-export const AutonomyLevelSchema = z.enum(['supervised', 'assisted', 'autonomous'])
-export type AutonomyLevel = z.infer<typeof AutonomyLevelSchema>
-
-/**
  * Permission settings for agent actions
  */
 export const PermissionConfigSchema = z.strictObject({
@@ -49,6 +40,8 @@ export const AgentConfigSchema = z.looseObject({
     .optional(),
   maxSteps: z.number().int().positive().optional(),
   permission: PermissionConfigSchema.optional(),
+  /** Whether this agent requires user approval before dispatch */
+  supervised: z.boolean().optional(),
 })
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>
@@ -57,8 +50,8 @@ export type AgentConfig = z.infer<typeof AgentConfigSchema>
  * Orca-specific settings
  */
 export const OrcaSettingsSchema = z.strictObject({
-  /** Default autonomy level for all agents */
-  autonomy: AutonomyLevelSchema.optional(),
+  /** Whether agents require user approval before dispatch by default */
+  defaultSupervised: z.boolean().optional(),
   /** Default model for agents that don't specify one */
   defaultModel: z.string().optional(),
   /** Validation settings */
@@ -80,7 +73,7 @@ export type OrcaSettings = z.infer<typeof OrcaSettingsSchema>
  * Supports:
  * - Overriding default agent settings (partial configs)
  * - Adding completely new custom agents (full configs)
- * - Global Orca settings (autonomy level, default model)
+ * - Global Orca settings (default supervision, default model)
  */
 export const OrcaUserConfigSchema = z.strictObject({
   /** Agent configurations - overrides or new agents */

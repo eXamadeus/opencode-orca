@@ -1,7 +1,13 @@
 import { describe, expect, mock, test } from 'bun:test'
 import type { OpencodeClient } from '@opencode-ai/sdk'
 import type { TaskMessage } from '../schemas/messages'
-import { type DispatchContext, dispatchToAgent } from './dispatch'
+import type { PlanContext } from '../schemas/payloads'
+import {
+  type DispatchContext,
+  createCheckpointMessage,
+  dispatchToAgent,
+  isAgentSupervised,
+} from './dispatch'
 import { DEFAULT_VALIDATION_CONFIG } from './types'
 
 /**
@@ -47,7 +53,9 @@ function createMockClient(options: {
 /**
  * Create a valid TaskMessage for testing
  */
-function createTaskMessage(overrides?: Partial<TaskMessage['payload']>): string {
+function createTaskMessage(
+  overrides?: Partial<TaskMessage['payload']> & { plan_context?: PlanContext },
+): string {
   const message: TaskMessage = {
     type: 'task',
     session_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -59,6 +67,24 @@ function createTaskMessage(overrides?: Partial<TaskMessage['payload']>): string 
     },
   }
   return JSON.stringify(message)
+}
+
+/**
+ * Create a TaskMessage object for testing helper functions
+ */
+function createTaskMessageObject(
+  overrides?: Partial<TaskMessage['payload']> & { plan_context?: PlanContext },
+): TaskMessage {
+  return {
+    type: 'task',
+    session_id: '550e8400-e29b-41d4-a716-446655440000',
+    timestamp: '2024-01-01T00:00:00.000Z',
+    payload: {
+      agent_id: 'coder',
+      prompt: 'Write a function',
+      ...overrides,
+    },
+  }
 }
 
 describe('dispatchToAgent', () => {
@@ -259,5 +285,140 @@ describe('dispatchToAgent', () => {
 
     // Should call prompt with the parent session ID
     expect(promptMock).toHaveBeenCalled()
+  })
+})
+
+describe('isAgentSupervised', () => {
+  test('returns false when agent has no supervised flag and no default', () => {
+    const agents = { coder: { mode: 'subagent' as const } }
+    expect(isAgentSupervised('coder', agents)).toBe(false)
+  })
+
+  test('returns true when agent has supervised: true', () => {
+    const agents = { coder: { mode: 'subagent' as const, supervised: true } }
+    expect(isAgentSupervised('coder', agents)).toBe(true)
+  })
+
+  test('returns false when agent has supervised: false', () => {
+    const agents = { coder: { mode: 'subagent' as const, supervised: false } }
+    expect(isAgentSupervised('coder', agents)).toBe(false)
+  })
+
+  test('uses defaultSupervised when agent has no supervised flag', () => {
+    const agents = { coder: { mode: 'subagent' as const } }
+    expect(isAgentSupervised('coder', agents, { defaultSupervised: true })).toBe(true)
+    expect(isAgentSupervised('coder', agents, { defaultSupervised: false })).toBe(false)
+  })
+
+  test('agent supervised flag overrides defaultSupervised', () => {
+    const agents = { coder: { mode: 'subagent' as const, supervised: false } }
+    expect(isAgentSupervised('coder', agents, { defaultSupervised: true })).toBe(false)
+
+    const agents2 = { coder: { mode: 'subagent' as const, supervised: true } }
+    expect(isAgentSupervised('coder', agents2, { defaultSupervised: false })).toBe(true)
+  })
+
+  test('returns false for unknown agent', () => {
+    const agents = { coder: { mode: 'subagent' as const } }
+    expect(isAgentSupervised('unknown', agents)).toBe(false)
+  })
+})
+
+describe('createCheckpointMessage', () => {
+  test('creates checkpoint from task message', () => {
+    const task = createTaskMessageObject()
+    const checkpoint = createCheckpointMessage(task)
+
+    expect(checkpoint.type).toBe('checkpoint')
+    expect(checkpoint.session_id).toBe(task.session_id)
+    expect(checkpoint.payload.agent_id).toBe('coder')
+    expect(checkpoint.payload.prompt).toBe('Write a function')
+    expect(checkpoint.payload.step_index).toBeUndefined()
+    expect(checkpoint.payload.plan_goal).toBeUndefined()
+  })
+
+  test('includes plan context fields when present', () => {
+    const task = createTaskMessageObject({
+      plan_context: {
+        goal: 'Build feature X',
+        step_index: 2,
+        approved_remaining: false,
+      },
+    })
+    const checkpoint = createCheckpointMessage(task)
+
+    expect(checkpoint.payload.step_index).toBe(2)
+    expect(checkpoint.payload.plan_goal).toBe('Build feature X')
+  })
+})
+
+describe('dispatchToAgent with supervision', () => {
+  const supervisedAgents = {
+    coder: { mode: 'subagent' as const, supervised: true },
+    researcher: { mode: 'subagent' as const, supervised: false },
+  }
+
+  test('returns checkpoint for supervised agent without approved_remaining', async () => {
+    const ctx: DispatchContext = {
+      client: createMockClient({}),
+      agents: supervisedAgents,
+      validationConfig: DEFAULT_VALIDATION_CONFIG,
+    }
+
+    const result = await dispatchToAgent(createTaskMessage({ agent_id: 'coder' }), ctx)
+    const parsed = JSON.parse(result)
+
+    expect(parsed.type).toBe('checkpoint')
+    expect(parsed.payload.agent_id).toBe('coder')
+    expect(parsed.payload.prompt).toBe('Write a function')
+  })
+
+  test('proceeds with dispatch when approved_remaining is true', async () => {
+    const ctx: DispatchContext = {
+      client: createMockClient({ promptResponse: 'Done' }),
+      agents: supervisedAgents,
+      validationConfig: { maxRetries: 2, wrapPlainText: true },
+    }
+
+    const result = await dispatchToAgent(
+      createTaskMessage({
+        agent_id: 'coder',
+        plan_context: { goal: 'Test', step_index: 0, approved_remaining: true },
+      }),
+      ctx,
+    )
+    const parsed = JSON.parse(result)
+
+    // Should proceed to dispatch and return result, not checkpoint
+    expect(parsed.type).toBe('result')
+    expect(parsed.payload.content).toBe('Done')
+  })
+
+  test('proceeds with dispatch for non-supervised agent', async () => {
+    const ctx: DispatchContext = {
+      client: createMockClient({ promptResponse: 'Research complete' }),
+      agents: supervisedAgents,
+      validationConfig: { maxRetries: 2, wrapPlainText: true },
+    }
+
+    const result = await dispatchToAgent(createTaskMessage({ agent_id: 'researcher' }), ctx)
+    const parsed = JSON.parse(result)
+
+    expect(parsed.type).toBe('result')
+    expect(parsed.payload.content).toBe('Research complete')
+  })
+
+  test('uses defaultSupervised from settings', async () => {
+    const ctx: DispatchContext = {
+      client: createMockClient({}),
+      agents: { coder: { mode: 'subagent' as const } }, // No explicit supervised flag
+      validationConfig: DEFAULT_VALIDATION_CONFIG,
+      settings: { defaultSupervised: true },
+    }
+
+    const result = await dispatchToAgent(createTaskMessage({ agent_id: 'coder' }), ctx)
+    const parsed = JSON.parse(result)
+
+    expect(parsed.type).toBe('checkpoint')
   })
 })

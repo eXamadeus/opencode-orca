@@ -5,7 +5,7 @@
  * - Type-enforced contracts via discriminated union validation
  * - State machine orchestration with HITL gates
  * - Session continuity between agents
- * - Configurable autonomy levels
+ * - Per-agent supervision with checkpoint protocol
  *
  * @packageDocumentation
  */
@@ -31,7 +31,6 @@ export { createOrcaPlugin } from './plugin'
 
 export type {
   AgentConfig,
-  AutonomyLevel,
   OrcaSettings,
   OrcaUserConfig,
   PermissionConfig,
@@ -39,7 +38,6 @@ export type {
 
 export {
   AgentConfigSchema,
-  AutonomyLevelSchema,
   OrcaSettingsSchema,
   OrcaUserConfigSchema,
   PermissionConfigSchema,
@@ -77,10 +75,12 @@ export type {
 // Payload schemas
 export {
   AnswerPayloadSchema,
+  CheckpointPayloadSchema,
   EscalationOptionSchema,
   EscalationPayloadSchema,
   FailurePayloadSchema,
   InterruptPayloadSchema,
+  PlanContextSchema,
   PlanPayloadSchema,
   PlanStepSchema,
   QuestionPayloadSchema,
@@ -90,10 +90,12 @@ export {
 } from './schemas/payloads'
 export type {
   AnswerPayload,
+  CheckpointPayload,
   EscalationOption,
   EscalationPayload,
   FailurePayload,
   InterruptPayload,
+  PlanContext,
   PlanPayload,
   PlanStep,
   QuestionPayload,
@@ -105,6 +107,7 @@ export type {
 // Message schemas
 export {
   AnswerMessageSchema,
+  CheckpointMessageSchema,
   EscalationMessageSchema,
   FailureMessageSchema,
   InterruptMessageSchema,
@@ -118,6 +121,7 @@ export {
 
 export type {
   AnswerMessage,
+  CheckpointMessage,
   EscalationMessage,
   FailureMessage,
   InterruptMessage,
@@ -134,7 +138,12 @@ export type {
 // Dispatch and validation (for advanced usage)
 // -----------------------------------------------------------------------------
 
-export { dispatchToAgent, type DispatchContext } from './plugin/dispatch'
+export {
+  createCheckpointMessage,
+  dispatchToAgent,
+  isAgentSupervised,
+  type DispatchContext,
+} from './plugin/dispatch'
 
 export {
   createFailureMessage,

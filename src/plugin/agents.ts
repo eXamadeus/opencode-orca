@@ -34,13 +34,14 @@ When communicating with other agents via the \`orca_dispatch\` tool, use this JS
 \`\`\`
 
 Message types:
-- **task**: Dispatch a task to another agent (payload: agent_id, prompt, context?, parent_session_id?)
+- **task**: Dispatch a task to another agent (payload: agent_id, prompt, context?, parent_session_id?, plan_context?)
 - **result**: Return successful completion with output (payload: agent_id, content, artifacts?)
 - **question**: Ask for clarification (payload: agent_id, question, options?, blocking)
 - **answer**: Respond to a question (payload: agent_id, content, sources?)
 - **failure**: Report an error with code and message (payload: agent_id?, code, message, cause?)
 - **plan**: Propose a multi-step plan for approval (payload: agent_id, goal, steps, assumptions?, files_touched?)
 - **escalation**: Request human decision between options (payload: agent_id, decision_id, decision, options, context)
+- **checkpoint**: Supervision checkpoint requiring user approval (payload: agent_id, prompt, step_index?, plan_goal?)
 - **interrupt**: User interruption signal (payload: reason, agent_id?)
 - **user_input**: Direct user input to resume (payload: content, in_response_to?)
 
@@ -101,6 +102,22 @@ Guidelines:
 - Maintain context across agent handoffs via session_id
 - Report progress and blockers to the user
 - Request approval for significant changes
+
+## Checkpoint Handling (Supervised Agents)
+
+Some agents are marked as "supervised" and require user approval before dispatch.
+When dispatching to a supervised agent, you'll receive a **checkpoint** message instead of the agent's response.
+
+When you receive a checkpoint:
+1. Present it to the user, explaining what agent will run and why
+2. Wait for user approval (yes/no/approve all remaining)
+3. If approved, re-dispatch with \`plan_context.approved_remaining: true\` to skip future checkpoints for this plan
+4. If denied, report the denial and adjust your plan accordingly
+
+The \`plan_context\` field in task messages tracks approval state:
+- \`goal\`: The overall plan objective
+- \`step_index\`: Current step number (0-based)
+- \`approved_remaining\`: If true, skip checkpoints for remaining steps in this plan
 
 ${PROTOCOL_INJECTION}`,
     color: '#6366F1', // Indigo

@@ -2,10 +2,12 @@ import { describe, expect, test } from 'bun:test'
 import type { ZodTypeAny } from 'zod'
 import {
   AnswerPayloadSchema,
+  CheckpointPayloadSchema,
   EscalationOptionSchema,
   EscalationPayloadSchema,
   FailurePayloadSchema,
   InterruptPayloadSchema,
+  PlanContextSchema,
   PlanPayloadSchema,
   PlanStepSchema,
   QuestionPayloadSchema,
@@ -45,6 +47,8 @@ const validFixtures: [string, ZodTypeAny, Record<string, unknown>][] = [
   ['UserInputPayloadSchema', UserInputPayloadSchema, { content: 'c' }],
   ['InterruptPayloadSchema', InterruptPayloadSchema, { reason: 'r' }],
   ['FailurePayloadSchema', FailurePayloadSchema, { code: 'AGENT_ERROR', message: 'm' }],
+  ['CheckpointPayloadSchema', CheckpointPayloadSchema, { agent_id: 'a', prompt: 'p' }],
+  ['PlanContextSchema', PlanContextSchema, { goal: 'g', step_index: 0, approved_remaining: false }],
 ]
 
 describe('strict mode rejects extra fields', () => {
@@ -128,5 +132,76 @@ describe('intentional design decisions', () => {
     // Intentionally no .min(1) — users can send empty messages
     const result = UserInputPayloadSchema.parse({ content: '' })
     expect(result.content).toBe('')
+  })
+})
+
+describe('CheckpointPayloadSchema', () => {
+  test('accepts minimal checkpoint payload', () => {
+    const payload = { agent_id: 'coder', prompt: 'Write tests' }
+    expect(CheckpointPayloadSchema.parse(payload)).toEqual(payload)
+  })
+
+  test('accepts full checkpoint payload with optional fields', () => {
+    const payload = {
+      agent_id: 'coder',
+      prompt: 'Write tests',
+      step_index: 2,
+      plan_goal: 'Implement feature X',
+    }
+    expect(CheckpointPayloadSchema.parse(payload)).toEqual(payload)
+  })
+
+  test('rejects empty prompt', () => {
+    expect(() => CheckpointPayloadSchema.parse({ agent_id: 'a', prompt: '' })).toThrow()
+  })
+
+  test('rejects negative step_index', () => {
+    expect(() =>
+      CheckpointPayloadSchema.parse({ agent_id: 'a', prompt: 'p', step_index: -1 }),
+    ).toThrow()
+  })
+})
+
+describe('PlanContextSchema', () => {
+  test('accepts valid plan context', () => {
+    const context = { goal: 'Deploy app', step_index: 0, approved_remaining: false }
+    expect(PlanContextSchema.parse(context)).toEqual(context)
+  })
+
+  test('rejects empty goal', () => {
+    expect(() =>
+      PlanContextSchema.parse({ goal: '', step_index: 0, approved_remaining: false }),
+    ).toThrow()
+  })
+
+  test('rejects negative step_index', () => {
+    expect(() =>
+      PlanContextSchema.parse({ goal: 'g', step_index: -1, approved_remaining: false }),
+    ).toThrow()
+  })
+
+  test('requires all fields (no optionals)', () => {
+    expect(() => PlanContextSchema.parse({ goal: 'g', step_index: 0 })).toThrow()
+    expect(() => PlanContextSchema.parse({ goal: 'g', approved_remaining: false })).toThrow()
+  })
+})
+
+describe('TaskPayloadSchema with plan_context', () => {
+  test('accepts task payload with plan_context', () => {
+    const payload = {
+      agent_id: 'coder',
+      prompt: 'Write code',
+      plan_context: {
+        goal: 'Build feature',
+        step_index: 1,
+        approved_remaining: true,
+      },
+    }
+    expect(TaskPayloadSchema.parse(payload)).toEqual(payload)
+  })
+
+  test('accepts task payload without plan_context', () => {
+    const payload = { agent_id: 'coder', prompt: 'Write code' }
+    expect(TaskPayloadSchema.parse(payload)).toEqual(payload)
   })
 })

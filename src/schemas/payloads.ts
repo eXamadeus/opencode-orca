@@ -3,6 +3,17 @@ import { AgentIdSchema, SessionIdSchema } from './common'
 import { ErrorCodeSchema } from './errors'
 
 /**
+ * Plan context for tracking approval state within a plan
+ */
+export const PlanContextSchema = z.strictObject({
+  goal: z.string().min(1),
+  step_index: z.number().int().nonnegative(),
+  approved_remaining: z.boolean(),
+})
+
+export type PlanContext = z.infer<typeof PlanContextSchema>
+
+/**
  * Task payload - Orca assigns work to a specialist agent
  */
 export const TaskPayloadSchema = z.strictObject({
@@ -10,6 +21,7 @@ export const TaskPayloadSchema = z.strictObject({
   prompt: z.string().min(1),
   context: z.record(z.string(), z.unknown()).optional(),
   parent_session_id: SessionIdSchema.optional(),
+  plan_context: PlanContextSchema.optional(),
 })
 
 export type TaskPayload = z.infer<typeof TaskPayloadSchema>
@@ -125,3 +137,15 @@ export const FailurePayloadSchema = z.strictObject({
 })
 
 export type FailurePayload = z.infer<typeof FailurePayloadSchema>
+
+/**
+ * Checkpoint payload - Supervision checkpoint requiring user approval
+ */
+export const CheckpointPayloadSchema = z.strictObject({
+  agent_id: AgentIdSchema,
+  prompt: z.string().min(1),
+  step_index: z.number().int().nonnegative().optional(),
+  plan_goal: z.string().optional(),
+})
+
+export type CheckpointPayload = z.infer<typeof CheckpointPayloadSchema>

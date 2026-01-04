@@ -55,4 +55,37 @@ describe('MessageEnvelopeSchema discriminated union', () => {
       throw new Error('Type narrowing failed')
     }
   })
+
+  test('accepts checkpoint message type', () => {
+    const msg = MessageEnvelopeSchema.parse({
+      ...baseEnvelope,
+      type: 'checkpoint',
+      payload: { agent_id: 'coder', prompt: 'Write tests' },
+    })
+
+    expect(msg.type).toBe('checkpoint')
+    if (msg.type === 'checkpoint') {
+      expect(msg.payload.agent_id).toBe('coder')
+      expect(msg.payload.prompt).toBe('Write tests')
+    }
+  })
+
+  test('accepts checkpoint message with optional fields', () => {
+    const msg = MessageEnvelopeSchema.parse({
+      ...baseEnvelope,
+      type: 'checkpoint',
+      payload: {
+        agent_id: 'coder',
+        prompt: 'Write tests',
+        step_index: 2,
+        plan_goal: 'Implement feature',
+      },
+    })
+
+    expect(msg.type).toBe('checkpoint')
+    if (msg.type === 'checkpoint') {
+      expect(msg.payload.step_index).toBe(2)
+      expect(msg.payload.plan_goal).toBe('Implement feature')
+    }
+  })
 })
