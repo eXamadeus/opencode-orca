@@ -1,9 +1,11 @@
 import { type Plugin, tool } from '@opencode-ai/plugin'
-import type { AgentConfig as OpenCodeAgentConfig } from '@opencode-ai/sdk'
+import type { Event, AgentConfig as OpenCodeAgentConfig } from '@opencode-ai/sdk'
 import { DEFAULT_AGENTS, mergeAgentConfigs } from './agents'
 import { type AgentConfig, type OrcaSettings, loadUserConfig } from './config'
 import { type DispatchContext, dispatchToAgent } from './dispatch'
 import { resolveValidationConfig } from './types'
+import { runUpdateNotifier } from './update-notifier'
+import { getPluginVersion } from './version'
 
 /**
  * Convert our AgentConfig to OpenCode's AgentConfig format
@@ -41,6 +43,9 @@ export const createOrcaPlugin = (): Plugin => {
     // Resolve validation config from user settings
     const validationConfig = resolveValidationConfig(userConfig?.settings)
 
+    // Track plugin entry for update notifier (will be populated in config hook)
+    let pluginEntry: string | undefined
+
     return {
       /**
        * Config hook - injects Orca agent definitions into OpenCode
@@ -52,6 +57,28 @@ export const createOrcaPlugin = (): Plugin => {
         // Inject all Orca agents
         for (const [agentId, agentConfig] of Object.entries(agents)) {
           config.agent[agentId] = toOpenCodeAgentConfig(agentConfig)
+        }
+
+        // Find our plugin entry for update notifier
+        pluginEntry = config.plugin?.find(
+          (p) => p === 'opencode-orca' || p.startsWith('opencode-orca@'),
+        )
+      },
+
+      /**
+       * Event hook - handles session lifecycle events
+       */
+      async event({ event }) {
+        // Run update notifier on session creation (fire-and-forget)
+        if (event.type === 'session.created') {
+          runUpdateNotifier({
+            client,
+            currentVersion: getPluginVersion(),
+            pluginEntry,
+            settings: userConfig?.settings,
+          }).catch(() => {
+            // Silently ignore update notifier errors
+          })
         }
       },
 

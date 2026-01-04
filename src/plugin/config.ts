@@ -70,6 +70,8 @@ export const OrcaSettingsSchema = z.strictObject({
       wrapPlainText: z.boolean().optional(),
     })
     .optional(),
+  /** Show notifications about plugin updates (default: true) */
+  updateNotifier: z.boolean().optional(),
 })
 
 export type OrcaSettings = z.infer<typeof OrcaSettingsSchema>
