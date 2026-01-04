@@ -24,7 +24,13 @@
     "type": "git",
     "url": "git+https://github.com/ex-machina-co/opencode-orca.git"
   },
-  "keywords": ["opencode", "plugin", "agents", "orchestration", "orca"],
+  "keywords": [
+    "opencode",
+    "plugin",
+    "agents",
+    "orchestration",
+    "orca"
+  ],
   "author": "Julian Coy <julian@ex-machina.co>",
   "license": "MIT",
   "bugs": {
@@ -46,7 +52,10 @@
   "peerDependencies": {
     "@opencode-ai/plugin": "^1.0.0"
   },
-  "files": ["dist", "templates"],
+  "files": [
+    "dist",
+    "templates"
+  ],
   "publishConfig": {
     "access": "public"
   }
