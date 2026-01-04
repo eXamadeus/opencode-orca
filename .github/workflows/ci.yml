@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   ci:
@@ -22,3 +22,42 @@ jobs:
 
       - name: Test
         run: bun test
+
+      - name: Build
+        run: bun run build
+
+      - name: Integration Test - CLI Install
+        run: |
+          # Create temp directory to simulate fresh user project
+          TESTDIR=$(mktemp -d)
+          echo "Testing CLI in: $TESTDIR"
+
+          # Run the install command from the temp directory
+          cd "$TESTDIR"
+          node "$GITHUB_WORKSPACE/dist/cli.js" install
+
+          # Verify opencode.jsonc was created with plugin entry
+          if [ ! -f "opencode.jsonc" ]; then
+            echo "FAIL: opencode.jsonc not created"
+            exit 1
+          fi
+          if ! grep -q "opencode-orca" opencode.jsonc; then
+            echo "FAIL: opencode-orca not found in opencode.jsonc"
+            exit 1
+          fi
+          echo "✓ opencode.jsonc created with plugin entry"
+
+          # Verify .opencode/orca.json was created with expected structure
+          if [ ! -f ".opencode/orca.json" ]; then
+            echo "FAIL: .opencode/orca.json not created"
+            exit 1
+          fi
+          if ! grep -q "autonomy" .opencode/orca.json; then
+            echo "FAIL: orca.json missing expected content"
+            exit 1
+          fi
+          echo "✓ .opencode/orca.json created with expected structure"
+
+          # Cleanup
+          rm -rf "$TESTDIR"
+          echo "Integration test passed!"
