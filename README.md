@@ -1,6 +1,6 @@
-# @ex-machina/opencode-orca
+# opencode-orca &#x1FACD;
 
-OpenCode plugin for Orca + Specialists agent orchestration.
+OpenCode plugin for safe and effective agent orchestration.
 
 ## Overview
 
