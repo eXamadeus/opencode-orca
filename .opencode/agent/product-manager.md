@@ -18,91 +18,34 @@ permission:
     "git fetch": allow
     "git fetch origin": allow
     "git remote -v*": allow
-    # === GitHub CLI - Allow all reads, deny writes ===
-    # Issues - deny mutations
-    "gh issue create*": deny
-    "gh issue edit*": deny
-    "gh issue close*": deny
-    "gh issue reopen*": deny
-    "gh issue delete*": deny
-    "gh issue comment*": deny
-    "gh issue transfer*": deny
-    "gh issue pin*": deny
-    "gh issue unpin*": deny
-    "gh issue lock*": deny
-    "gh issue unlock*": deny
-    # PRs - deny mutations
-    "gh pr create*": deny
-    "gh pr edit*": deny
-    "gh pr close*": deny
-    "gh pr reopen*": deny
-    "gh pr merge*": deny
-    "gh pr ready*": deny
-    "gh pr review*": deny
-    "gh pr comment*": deny
-    # Releases - deny mutations
-    "gh release create*": deny
-    "gh release delete*": deny
-    "gh release edit*": deny
-    "gh release upload*": deny
-    # Repos - deny mutations
-    "gh repo create*": deny
-    "gh repo delete*": deny
-    "gh repo edit*": deny
-    "gh repo fork*": deny
-    "gh repo rename*": deny
-    "gh repo archive*": deny
-    "gh repo unarchive*": deny
-    "gh repo clone*": deny
-    "gh repo sync*": deny
-    # Projects - deny mutations
-    "gh project create*": deny
-    "gh project delete*": deny
-    "gh project edit*": deny
-    "gh project close*": deny
-    "gh project item-add*": deny
-    "gh project item-delete*": deny
-    "gh project item-edit*": deny
-    "gh project item-archive*": deny
-    "gh project mark-template*": deny
-    "gh project link*": deny
-    "gh project unlink*": deny
-    # Labels - deny mutations
-    "gh label create*": deny
-    "gh label delete*": deny
-    "gh label edit*": deny
-    # Gists - deny mutations
-    "gh gist create*": deny
-    "gh gist delete*": deny
-    "gh gist edit*": deny
-    "gh gist rename*": deny
-    # Workflows - deny run trigger
-    "gh workflow run*": deny
-    "gh run cancel*": deny
-    "gh run rerun*": deny
-    "gh run delete*": deny
-    # API - deny mutations
-    "gh api * -X POST*": deny
-    "gh api * -X PATCH*": deny
-    "gh api * -X DELETE*": deny
-    "gh api * -X PUT*": deny
-    "gh api * --method POST*": deny
-    "gh api * --method PATCH*": deny
-    "gh api * --method DELETE*": deny
-    "gh api * --method PUT*": deny
-    # Auth/config - deny changes
-    "gh auth*": deny
-    "gh config*": deny
-    "gh secret*": deny
-    "gh variable*": deny
-    "gh ssh-key*": deny
-    "gh gpg-key*": deny
-    # Extensions - deny install/remove
-    "gh extension install*": deny
-    "gh extension remove*": deny
-    "gh extension upgrade*": deny
-    # Allow everything else (reads)
-    "gh *": allow
+    # === GitHub CLI Reads ===
+    "gh issue view*": allow
+    "gh issue list*": allow
+    "gh issue status*": allow
+    "gh pr view*": allow
+    "gh pr list*": allow
+    "gh pr diff*": allow
+    "gh pr checks*": allow
+    "gh pr status*": allow
+    "gh project list*": allow
+    "gh project view*": allow
+    "gh project item-list*": allow
+    "gh project field-list*": allow
+    "gh release list*": allow
+    "gh release view*": allow
+    "gh repo view*": allow
+    "gh run list*": allow
+    "gh run view*": allow
+    "gh run watch*": allow
+    "gh search *": allow
+    # === gh api: deny mutations, allow reads ===
+    "gh api *POST*": deny
+    "gh api *PATCH*": deny
+    "gh api *PUT*": deny
+    "gh api *DELETE*": deny
+    "gh api *": allow
+    # === Catch-all deny ===
+    "gh *": deny
     # === Git Writes - deny ===
     "git commit*": deny
     "git push*": deny
