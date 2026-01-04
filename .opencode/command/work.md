@@ -36,10 +36,40 @@ From the selected issue, extract:
 - `ISSUE_NUMBER`: The issue number (e.g., `42`)
 - `ISSUE_TITLE`: The issue title
 - `ISSUE_LABELS`: The labels on the issue
+- `ISSUE_ASSIGNEES`: Current assignees on the issue
 
 ---
 
-## Phase 3: Compute Branch Components
+## Phase 3: Update Issue Status and Assignment
+
+### Set Status to "In Progress"
+
+Delegate to `github` agent:
+
+```
+Update project item status for issue #<ISSUE_NUMBER>:
+- Project number: 2
+- Owner: @me
+- New status: "In Progress" (option ID: 47fc9ee4)
+```
+
+### Assign to Current User (if not already assigned)
+
+Check if current user is already assigned:
+```bash
+gh api user --jq '.login'
+```
+
+If current user's login is NOT in ISSUE_ASSIGNEES:
+
+Delegate to `github` agent:
+```
+Add @me as assignee to issue #<ISSUE_NUMBER>
+```
+
+---
+
+## Phase 4: Compute Branch Components
 
 **TAG** — Map first matching label to tag:
 | Label   | Tag   |
@@ -61,7 +91,7 @@ From the selected issue, extract:
 
 ---
 
-## Phase 4: Execute Commands
+## Phase 5: Execute Commands
 
 Run these exact commands in sequence:
 
@@ -81,11 +111,13 @@ idea worktrees/feat-42-add-user-profile-settings/
 
 ---
 
-## Phase 5: Report
+## Phase 6: Report
 
 Output to user:
 ```
 ✓ Issue: #<ISSUE_NUMBER> — <ISSUE_TITLE>
+✓ Status: In Progress
+✓ Assigned: @me
 ✓ Branch: <BRANCH>
 ✓ Worktree: worktrees/<FOLDER>/
 ✓ IDE: Launched

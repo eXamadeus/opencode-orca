@@ -154,11 +154,12 @@ gh extension install yahsan2/gh-sub-issue
 | `chore`   | Maintenance/cleanup           |
 
 ### Project Board Statuses
-| Status      | Meaning               |
-| ----------- | --------------------- |
-| Todo        | Not started           |
-| In Progress | Actively being worked |
-| Done        | Completed             |
+| Status      | Meaning                         |
+| ----------- | ------------------------------- |
+| Todo        | Not started                     |
+| In Progress | Actively being worked           |
+| In Review   | PR created, awaiting review     |
+| Done        | Completed                       |
 
 ## Operations
 
@@ -238,7 +239,7 @@ Delegate to github agent:
 ### Update Project Item Status (Delegate)
 
 Delegate to github agent:
-> Update issue #[N] project status to: [todo|in_progress|done]
+> Update issue #[N] project status to: [todo|in_progress|in_review|done]
 
 ## Skills
 
