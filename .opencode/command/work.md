@@ -1,6 +1,6 @@
 ---
 description: Pick up an issue and set up development environment
-agent: product-manager
+agent: executor
 subtask: true
 ---
 
@@ -13,7 +13,7 @@ Pick up a GitHub issue and set up a development environment for it.
 
 ---
 
-## Phase 1: Issue Selection
+## Phase 1: Issue Selection (via @product-manager agent)
 
 **If description provided ("$ARGUMENTS" is not empty):**
 1. Search assigned issues for one matching: "$ARGUMENTS"
