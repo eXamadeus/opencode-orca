@@ -1,18 +1,29 @@
 /**
  * OpenCode Orca Plugin
  *
- * Provides the Orca + Specialists agent orchestration system with:
- * - Type-enforced contracts via discriminated union validation
- * - State machine orchestration with HITL gates
- * - Session continuity between agents
- * - Per-agent supervision with checkpoint protocol
+ * Provides the Orca + Specialists agent orchestration system.
  *
  * @packageDocumentation
  */
 
-// -----------------------------------------------------------------------------
-// Plugin exports (primary)
-// -----------------------------------------------------------------------------
+// =============================================================================
+// IMPORTANT: OpenCode Plugin Export Rules
+// =============================================================================
+//
+// OpenCode's plugin loader iterates ALL exports and calls each as a function:
+//
+//   for (const [_name, fn] of Object.entries(mod)) {
+//     const init = await fn(input)  // <-- Calls EVERY export!
+//   }
+//
+// Therefore:
+// - DO NOT export functions (except the default plugin)
+// - DO NOT export objects, schemas, or constants
+// - Type-only exports (export type { ... }) are safe (erased at runtime)
+//
+// If you need to expose utilities for external use, create a separate entry
+// point (e.g., "./schemas") in package.json exports.
+// =============================================================================
 
 /**
  * Default plugin instance for OpenCode registration
@@ -20,15 +31,12 @@
  */
 export { default } from './plugin'
 
-/**
- * Plugin factory for custom configuration
- */
-export { createOrcaPlugin } from './plugin'
-
 // -----------------------------------------------------------------------------
-// Config types (for user configuration)
+// Type-only exports for TypeScript consumers
+// These are erased at runtime and won't interfere with plugin loading
 // -----------------------------------------------------------------------------
 
+// Config types (for user configuration files)
 export type {
   AgentConfig,
   OrcaSettings,
@@ -36,58 +44,23 @@ export type {
   PermissionConfig,
 } from './plugin/config'
 
-export {
-  AgentConfigSchema,
-  OrcaSettingsSchema,
-  OrcaUserConfigSchema,
-  PermissionConfigSchema,
-  USER_CONFIG_PATH,
-} from './plugin/config'
-
-// -----------------------------------------------------------------------------
-// Agent definitions (for extension/reference)
-// -----------------------------------------------------------------------------
-
-export { DEFAULT_AGENTS, PROTOCOL_INJECTION, mergeAgentConfigs } from './plugin/agents'
-
-// -----------------------------------------------------------------------------
-// Contract schemas (for message validation)
-// -----------------------------------------------------------------------------
-
-// Error codes
-export { ErrorCode, ErrorCodeSchema } from './schemas/errors'
-export type { ErrorCode as ErrorCodeType } from './schemas/errors'
-
-// Common primitives
-export {
-  AgentIdSchema,
-  BaseEnvelopeSchema,
-  SessionIdSchema,
-  TimestampSchema,
-} from './schemas/common'
+// Message types (for understanding the protocol)
 export type {
-  AgentId,
-  BaseEnvelope,
-  SessionId,
-  Timestamp,
-} from './schemas/common'
+  AnswerMessage,
+  CheckpointMessage,
+  EscalationMessage,
+  FailureMessage,
+  InterruptMessage,
+  MessageEnvelope,
+  MessageType,
+  PlanMessage,
+  QuestionMessage,
+  ResultMessage,
+  TaskMessage,
+  UserInputMessage,
+} from './schemas/messages'
 
-// Payload schemas
-export {
-  AnswerPayloadSchema,
-  CheckpointPayloadSchema,
-  EscalationOptionSchema,
-  EscalationPayloadSchema,
-  FailurePayloadSchema,
-  InterruptPayloadSchema,
-  PlanContextSchema,
-  PlanPayloadSchema,
-  PlanStepSchema,
-  QuestionPayloadSchema,
-  ResultPayloadSchema,
-  TaskPayloadSchema,
-  UserInputPayloadSchema,
-} from './schemas/payloads'
+// Payload types
 export type {
   AnswerPayload,
   CheckpointPayload,
@@ -104,58 +77,20 @@ export type {
   UserInputPayload,
 } from './schemas/payloads'
 
-// Message schemas
-export {
-  AnswerMessageSchema,
-  CheckpointMessageSchema,
-  EscalationMessageSchema,
-  FailureMessageSchema,
-  InterruptMessageSchema,
-  MessageEnvelopeSchema,
-  PlanMessageSchema,
-  QuestionMessageSchema,
-  ResultMessageSchema,
-  TaskMessageSchema,
-  UserInputMessageSchema,
-} from './schemas/messages'
-
+// Common types
 export type {
-  AnswerMessage,
-  CheckpointMessage,
-  EscalationMessage,
-  FailureMessage,
-  InterruptMessage,
-  MessageEnvelope,
-  MessageType,
-  PlanMessage,
-  QuestionMessage,
-  ResultMessage,
-  TaskMessage,
-  UserInputMessage,
-} from './schemas/messages'
+  AgentId,
+  BaseEnvelope,
+  SessionId,
+  Timestamp,
+} from './schemas/common'
 
-// -----------------------------------------------------------------------------
-// Dispatch and validation (for advanced usage)
-// -----------------------------------------------------------------------------
+// Error code type (the enum type, not the value)
+export type { ErrorCode as ErrorCodeType } from './schemas/errors'
 
-export {
-  createCheckpointMessage,
-  dispatchToAgent,
-  isAgentSupervised,
-  type DispatchContext,
-} from './plugin/dispatch'
+// Dispatch types
+export type { DispatchContext } from './plugin/dispatch'
 
-export {
-  createFailureMessage,
-  formatZodErrors,
-  validateMessage,
-  validateWithRetry,
-  wrapAsResultMessage,
-  type ValidationResult,
-} from './plugin/validation'
-
-export {
-  DEFAULT_VALIDATION_CONFIG,
-  resolveValidationConfig,
-  type ValidationConfig,
-} from './plugin/types'
+// Validation types
+export type { ValidationConfig } from './plugin/types'
+export type { ValidationResult } from './plugin/validation'
