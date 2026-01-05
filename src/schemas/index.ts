@@ -8,40 +8,48 @@ export type { ErrorCode as ErrorCodeType } from './errors'
 export {
   AgentIdSchema,
   BaseEnvelopeSchema,
+  ResponseEnvelopeSchema,
   SessionIdSchema,
   TimestampSchema,
 } from './common'
 export type {
   AgentId,
   BaseEnvelope,
+  ResponseEnvelope,
   SessionId,
   Timestamp,
 } from './common'
 
 // Payload schemas
 export {
+  AnnotationSchema,
   AnswerPayloadSchema,
+  CheckpointPayloadSchema,
   EscalationOptionSchema,
   EscalationPayloadSchema,
   FailurePayloadSchema,
   InterruptPayloadSchema,
+  PlanContextSchema,
   PlanPayloadSchema,
   PlanStepSchema,
   QuestionPayloadSchema,
-  ResultPayloadSchema,
+  SourceSchema,
   TaskPayloadSchema,
   UserInputPayloadSchema,
 } from './payloads'
 export type {
+  Annotation,
   AnswerPayload,
+  CheckpointPayload,
   EscalationOption,
   EscalationPayload,
   FailurePayload,
   InterruptPayload,
+  PlanContext,
   PlanPayload,
   PlanStep,
   QuestionPayload,
-  ResultPayload,
+  Source,
   TaskPayload,
   UserInputPayload,
 } from './payloads'
@@ -49,19 +57,20 @@ export type {
 // Message schemas
 export {
   AnswerMessageSchema,
+  CheckpointMessageSchema,
   EscalationMessageSchema,
   FailureMessageSchema,
   InterruptMessageSchema,
   MessageEnvelopeSchema,
   PlanMessageSchema,
   QuestionMessageSchema,
-  ResultMessageSchema,
   TaskMessageSchema,
   UserInputMessageSchema,
 } from './messages'
 
 export type {
   AnswerMessage,
+  CheckpointMessage,
   EscalationMessage,
   FailureMessage,
   InterruptMessage,
@@ -69,7 +78,6 @@ export type {
   MessageType,
   PlanMessage,
   QuestionMessage,
-  ResultMessage,
   TaskMessage,
   UserInputMessage,
 } from './messages'

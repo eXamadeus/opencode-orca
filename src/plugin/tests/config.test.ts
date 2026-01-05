@@ -4,7 +4,8 @@ import {
   OrcaSettingsSchema,
   OrcaUserConfigSchema,
   PermissionConfigSchema,
-} from './config'
+  ResponseTypeSchema,
+} from '../config'
 
 describe('config schemas', () => {
   describe('PermissionConfigSchema', () => {
@@ -100,6 +101,36 @@ describe('config schemas', () => {
       const config = { model: 'some-model' }
       const result = AgentConfigSchema.parse(config)
       expect(result.supervised).toBeUndefined()
+    })
+
+    test('accepts responseTypes array', () => {
+      const result = AgentConfigSchema.parse({ responseTypes: ['answer', 'failure'] })
+      expect(result.responseTypes).toEqual(['answer', 'failure'])
+    })
+
+    test('accepts empty responseTypes array', () => {
+      const result = AgentConfigSchema.parse({ responseTypes: [] })
+      expect(result.responseTypes).toEqual([])
+    })
+
+    test('rejects invalid responseTypes values', () => {
+      expect(() => AgentConfigSchema.parse({ responseTypes: ['invalid'] })).toThrow()
+      expect(() => AgentConfigSchema.parse({ responseTypes: ['result'] })).toThrow()
+    })
+  })
+
+  describe('ResponseTypeSchema', () => {
+    test('accepts valid response types', () => {
+      expect(ResponseTypeSchema.parse('answer')).toBe('answer')
+      expect(ResponseTypeSchema.parse('plan')).toBe('plan')
+      expect(ResponseTypeSchema.parse('question')).toBe('question')
+      expect(ResponseTypeSchema.parse('escalation')).toBe('escalation')
+      expect(ResponseTypeSchema.parse('failure')).toBe('failure')
+    })
+
+    test('rejects invalid response types', () => {
+      expect(() => ResponseTypeSchema.parse('result')).toThrow()
+      expect(() => ResponseTypeSchema.parse('invalid')).toThrow()
     })
   })
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { DEFAULT_AGENTS, PROTOCOL_INJECTION, mergeAgentConfigs } from './agents'
-import type { AgentConfig } from './config'
+import { DEFAULT_AGENTS, PROTECTED_AGENTS, mergeAgentConfigs } from '../agents'
+import type { AgentConfig } from '../config'
 
 describe('DEFAULT_AGENTS', () => {
   test('contains all expected agents', () => {
@@ -42,40 +42,16 @@ describe('DEFAULT_AGENTS', () => {
     }
   })
 
-  test('all agents have prompts with protocol injection', () => {
+  test('all subagents have prompts with response format injection', () => {
     for (const [id, config] of Object.entries(DEFAULT_AGENTS)) {
       expect(config.prompt).toBeDefined()
-      expect(config.prompt).toContain('Orca Communication Protocol')
+      if (id === 'orca') {
+        // Orca doesn't get response format injection
+        expect(config.prompt).not.toContain('Response Format (REQUIRED)')
+      } else {
+        expect(config.prompt).toContain('Response Format (REQUIRED)')
+      }
     }
-  })
-})
-
-describe('PROTOCOL_INJECTION', () => {
-  test('contains protocol header', () => {
-    expect(PROTOCOL_INJECTION).toContain('## Orca Communication Protocol')
-  })
-
-  test('documents all message types', () => {
-    const expectedTypes = [
-      'task',
-      'result',
-      'question',
-      'answer',
-      'failure',
-      'plan',
-      'escalation',
-      'checkpoint',
-      'interrupt',
-      'user_input',
-    ]
-    for (const type of expectedTypes) {
-      expect(PROTOCOL_INJECTION).toContain(`**${type}**`)
-    }
-  })
-
-  test('documents checkpoint message type', () => {
-    expect(PROTOCOL_INJECTION).toContain('**checkpoint**')
-    expect(PROTOCOL_INJECTION).toContain('agent_id, prompt, step_index?, plan_goal?')
   })
 })
 
@@ -86,11 +62,100 @@ describe('Orca agent prompt', () => {
     expect(orcaPrompt).toContain('supervised')
     expect(orcaPrompt).toContain('approved_remaining')
   })
+})
 
-  test('includes JSON schema in expandable section', () => {
-    expect(PROTOCOL_INJECTION).toContain('<details>')
-    expect(PROTOCOL_INJECTION).toContain('Full JSON Schema')
-    expect(PROTOCOL_INJECTION).toContain('</details>')
+describe('DEFAULT_AGENTS responseTypes', () => {
+  test('orca has empty responseTypes', () => {
+    expect(DEFAULT_AGENTS.orca.responseTypes).toEqual([])
+  })
+
+  test('strategist has full responseTypes', () => {
+    expect(DEFAULT_AGENTS.strategist.responseTypes).toEqual([
+      'plan',
+      'question',
+      'escalation',
+      'answer',
+      'failure',
+    ])
+  })
+
+  test('specialists have default responseTypes', () => {
+    const specialists = [
+      'coder',
+      'tester',
+      'reviewer',
+      'researcher',
+      'document-writer',
+      'architect',
+    ]
+    for (const id of specialists) {
+      expect(DEFAULT_AGENTS[id].responseTypes).toEqual(['answer', 'failure'])
+    }
+  })
+})
+
+describe('PROTECTED_AGENTS', () => {
+  test('contains orca and strategist', () => {
+    expect(PROTECTED_AGENTS).toContain('orca')
+    expect(PROTECTED_AGENTS).toContain('strategist')
+  })
+})
+
+describe('protected agents in mergeAgentConfigs', () => {
+  test('orca responseTypes cannot be overridden', () => {
+    const defaults: Record<string, AgentConfig> = {
+      orca: { mode: 'primary', responseTypes: [] },
+    }
+    const user: Record<string, AgentConfig> = {
+      orca: { responseTypes: ['answer'] },
+    }
+    const result = mergeAgentConfigs(defaults, user)
+    expect(result.orca.responseTypes).toEqual([])
+  })
+
+  test('strategist responseTypes cannot be overridden', () => {
+    const defaults: Record<string, AgentConfig> = {
+      strategist: {
+        mode: 'subagent',
+        responseTypes: ['plan', 'question', 'escalation', 'answer', 'failure'],
+      },
+    }
+    const user: Record<string, AgentConfig> = {
+      strategist: { responseTypes: ['answer'] },
+    }
+    const result = mergeAgentConfigs(defaults, user)
+    expect(result.strategist.responseTypes).toEqual([
+      'plan',
+      'question',
+      'escalation',
+      'answer',
+      'failure',
+    ])
+  })
+
+  test('non-protected agents can override responseTypes', () => {
+    const defaults: Record<string, AgentConfig> = {
+      coder: { mode: 'subagent', responseTypes: ['answer', 'failure'] },
+    }
+    const user: Record<string, AgentConfig> = {
+      coder: { responseTypes: ['answer', 'question'] },
+    }
+    const result = mergeAgentConfigs(defaults, user)
+    expect(result.coder.responseTypes).toEqual(['answer', 'question'])
+  })
+
+  test('custom agents can set responseTypes', () => {
+    const defaults: Record<string, AgentConfig> = {
+      coder: { mode: 'subagent' },
+    }
+    const user: Record<string, AgentConfig> = {
+      'my-specialist': {
+        mode: 'subagent',
+        responseTypes: ['answer', 'question'],
+      },
+    }
+    const result = mergeAgentConfigs(defaults, user)
+    expect(result['my-specialist'].responseTypes).toEqual(['answer', 'question'])
   })
 })
 

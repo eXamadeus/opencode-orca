@@ -1,77 +1,32 @@
 import * as agents from '../agents'
-import { MessageEnvelopeSchema, generateProtocolDocumentation } from '../schemas'
-import type { AgentConfig } from './config'
+import type { AgentConfig, ResponseType } from './config'
+import { generateResponseFormatInstructions } from './response-format'
+import { DEFAULT_RESPONSE_TYPES } from './types'
 
 /**
- * Extract message types from the discriminated union schema
+ * Agents whose responseTypes cannot be overridden by user configuration.
+ * These are core orchestration agents with specific response type requirements.
  */
-function getMessageTypes(): string[] {
-  return MessageEnvelopeSchema.options.map((opt) => {
-    const shape = opt.shape
-    // Zod 4 uses `values` array instead of `value`
-    return shape.type.def.values[0]
-  })
-}
+export const PROTECTED_AGENTS = ['orca', 'strategist'] as const
 
 /**
- * Generate protocol documentation from the actual schema
+ * Append response format instructions to an agent's prompt.
+ * Uses the agent's responseTypes configuration to generate appropriate examples.
  */
-function generateProtocolDocs(): string {
-  const messageTypes = getMessageTypes()
-  const jsonSchema = generateProtocolDocumentation()
+function withProtocol(agentId: string, agent: AgentConfig): AgentConfig {
+  const responseTypes = agent.responseTypes ?? DEFAULT_RESPONSE_TYPES
+  const formatInstructions = generateResponseFormatInstructions(
+    agentId,
+    responseTypes as ResponseType[],
+  )
 
-  return `
-## Orca Communication Protocol
+  if (!formatInstructions) {
+    return agent // Orca gets no injection (empty responseTypes)
+  }
 
-When communicating with other agents via the \`orca_dispatch\` tool, use this JSON message format:
-
-\`\`\`json
-{
-  "type": "${messageTypes.join('" | "')}",
-  "session_id": "uuid",
-  "timestamp": "ISO8601_datetime",
-  "payload": { ... type-specific payload ... }
-}
-\`\`\`
-
-Message types:
-- **task**: Dispatch a task to another agent (payload: agent_id, prompt, context?, parent_session_id?, plan_context?)
-- **result**: Return successful completion with output (payload: agent_id, content, artifacts?)
-- **question**: Ask for clarification (payload: agent_id, question, options?, blocking)
-- **answer**: Respond to a question (payload: agent_id, content, sources?)
-- **failure**: Report an error with code and message (payload: agent_id?, code, message, cause?)
-- **plan**: Propose a multi-step plan for approval (payload: agent_id, goal, steps, assumptions?, files_touched?)
-- **escalation**: Request human decision between options (payload: agent_id, decision_id, decision, options, context)
-- **checkpoint**: Supervision checkpoint requiring user approval (payload: agent_id, prompt, step_index?, plan_goal?)
-- **interrupt**: User interruption signal (payload: reason, agent_id?)
-- **user_input**: Direct user input to resume (payload: content, in_response_to?)
-
-Always validate messages before sending. Invalid messages will be rejected.
-
-<details>
-<summary>Full JSON Schema (click to expand)</summary>
-
-\`\`\`json
-${jsonSchema}
-\`\`\`
-
-</details>
-`.trim()
-}
-
-/**
- * Protocol injection - appended to agent prompts to enable the Orca message format
- * Generated from the actual Zod schemas to ensure accuracy
- */
-export const PROTOCOL_INJECTION = generateProtocolDocs()
-
-/**
- * Append protocol injection to an agent's prompt
- */
-function withProtocol(agent: AgentConfig): AgentConfig {
   return {
     ...agent,
-    prompt: `${agent.prompt}\n\n${PROTOCOL_INJECTION}`,
+    prompt: agent.prompt ? `${agent.prompt}\n\n${formatInstructions}` : formatInstructions,
   }
 }
 
@@ -82,14 +37,14 @@ function withProtocol(agent: AgentConfig): AgentConfig {
  * overridden or extended via .opencode/orca.json
  */
 export const DEFAULT_AGENTS: Record<string, AgentConfig> = {
-  orca: withProtocol(agents.orca),
-  strategist: withProtocol(agents.strategist),
-  coder: withProtocol(agents.coder),
-  tester: withProtocol(agents.tester),
-  reviewer: withProtocol(agents.reviewer),
-  researcher: withProtocol(agents.researcher),
-  'document-writer': withProtocol(agents.documentWriter),
-  architect: withProtocol(agents.architect),
+  orca: withProtocol('orca', agents.orca),
+  strategist: withProtocol('strategist', agents.strategist),
+  coder: withProtocol('coder', agents.coder),
+  tester: withProtocol('tester', agents.tester),
+  reviewer: withProtocol('reviewer', agents.reviewer),
+  researcher: withProtocol('researcher', agents.researcher),
+  'document-writer': withProtocol('document-writer', agents.documentWriter),
+  architect: withProtocol('architect', agents.architect),
 }
 
 /**
@@ -154,6 +109,11 @@ export function mergeAgentConfigs(
 
       // Skip disabled agents
       if (merged.disable) continue
+
+      // Protected agents: preserve default responseTypes (ignore user override)
+      if (PROTECTED_AGENTS.includes(agentId as (typeof PROTECTED_AGENTS)[number])) {
+        merged.responseTypes = defaultConfig.responseTypes
+      }
 
       result[agentId] = merged
     } else {

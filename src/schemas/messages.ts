@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { BaseEnvelopeSchema } from './common'
+import { BaseEnvelopeSchema, ResponseEnvelopeSchema } from './common'
 import {
   AnswerPayloadSchema,
   CheckpointPayloadSchema,
@@ -8,7 +8,6 @@ import {
   InterruptPayloadSchema,
   PlanPayloadSchema,
   QuestionPayloadSchema,
-  ResultPayloadSchema,
   TaskPayloadSchema,
   UserInputPayloadSchema,
 } from './payloads'
@@ -24,19 +23,9 @@ export const TaskMessageSchema = BaseEnvelopeSchema.extend({
 export type TaskMessage = z.infer<typeof TaskMessageSchema>
 
 /**
- * Result message - Specialist returns completed work
- */
-export const ResultMessageSchema = BaseEnvelopeSchema.extend({
-  type: z.literal('result'),
-  payload: ResultPayloadSchema,
-})
-
-export type ResultMessage = z.infer<typeof ResultMessageSchema>
-
-/**
  * Plan message - Strategist returns an execution plan
  */
-export const PlanMessageSchema = BaseEnvelopeSchema.extend({
+export const PlanMessageSchema = ResponseEnvelopeSchema.extend({
   type: z.literal('plan'),
   payload: PlanPayloadSchema,
 })
@@ -44,9 +33,9 @@ export const PlanMessageSchema = BaseEnvelopeSchema.extend({
 export type PlanMessage = z.infer<typeof PlanMessageSchema>
 
 /**
- * Answer message - Response to a question
+ * Answer message - Agent response with optional sources and annotations
  */
-export const AnswerMessageSchema = BaseEnvelopeSchema.extend({
+export const AnswerMessageSchema = ResponseEnvelopeSchema.extend({
   type: z.literal('answer'),
   payload: AnswerPayloadSchema,
 })
@@ -56,7 +45,7 @@ export type AnswerMessage = z.infer<typeof AnswerMessageSchema>
 /**
  * Question message - Agent asks for clarification
  */
-export const QuestionMessageSchema = BaseEnvelopeSchema.extend({
+export const QuestionMessageSchema = ResponseEnvelopeSchema.extend({
   type: z.literal('question'),
   payload: QuestionPayloadSchema,
 })
@@ -66,7 +55,7 @@ export type QuestionMessage = z.infer<typeof QuestionMessageSchema>
 /**
  * Escalation message - Agent escalates to Orca for a decision
  */
-export const EscalationMessageSchema = BaseEnvelopeSchema.extend({
+export const EscalationMessageSchema = ResponseEnvelopeSchema.extend({
   type: z.literal('escalation'),
   payload: EscalationPayloadSchema,
 })
@@ -96,7 +85,7 @@ export type InterruptMessage = z.infer<typeof InterruptMessageSchema>
 /**
  * Failure message - Agent reports a failure
  */
-export const FailureMessageSchema = BaseEnvelopeSchema.extend({
+export const FailureMessageSchema = ResponseEnvelopeSchema.extend({
   type: z.literal('failure'),
   payload: FailurePayloadSchema,
 })
@@ -106,7 +95,7 @@ export type FailureMessage = z.infer<typeof FailureMessageSchema>
 /**
  * Checkpoint message - Supervision checkpoint requiring user approval
  */
-export const CheckpointMessageSchema = BaseEnvelopeSchema.extend({
+export const CheckpointMessageSchema = ResponseEnvelopeSchema.extend({
   type: z.literal('checkpoint'),
   payload: CheckpointPayloadSchema,
 })
@@ -118,7 +107,6 @@ export type CheckpointMessage = z.infer<typeof CheckpointMessageSchema>
  */
 export const MessageEnvelopeSchema = z.discriminatedUnion('type', [
   TaskMessageSchema,
-  ResultMessageSchema,
   PlanMessageSchema,
   AnswerMessageSchema,
   QuestionMessageSchema,

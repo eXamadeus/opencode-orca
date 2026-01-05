@@ -1,11 +1,10 @@
-import { randomUUID } from 'node:crypto'
 import type { ZodError } from 'zod'
 import { ErrorCode } from '../schemas/errors'
 import {
+  type AnswerMessage,
   type FailureMessage,
   type MessageEnvelope,
   MessageEnvelopeSchema,
-  type ResultMessage,
 } from '../schemas/messages'
 import type { ValidationConfig } from './types'
 import { DEFAULT_VALIDATION_CONFIG } from './types'
@@ -39,12 +38,11 @@ export function formatZodErrors(error: ZodError): string {
 }
 
 /**
- * Wrap plain text content as a ResultMessage envelope
+ * Wrap plain text content as an AnswerMessage envelope
  */
-export function wrapAsResultMessage(content: string, agentId: string): ResultMessage {
+export function wrapAsAnswerMessage(content: string, agentId: string): AnswerMessage {
   return {
-    type: 'result',
-    session_id: randomUUID(),
+    type: 'answer',
     timestamp: nowTimestamp(),
     payload: {
       agent_id: agentId,
@@ -63,7 +61,6 @@ export function createFailureMessage(
 ): FailureMessage {
   return {
     type: 'failure',
-    session_id: randomUUID(),
     timestamp: nowTimestamp(),
     payload: {
       code,
@@ -132,7 +129,7 @@ export async function validateWithRetry(
   while (attempts <= config.maxRetries) {
     // Check for plain text wrapping
     if (config.wrapPlainText && isPlainText(currentRaw)) {
-      return wrapAsResultMessage(currentRaw, agentId)
+      return wrapAsAnswerMessage(currentRaw, agentId)
     }
 
     const result = validateMessage(currentRaw)

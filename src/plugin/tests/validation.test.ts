@@ -1,20 +1,19 @@
 import { describe, expect, test } from 'bun:test'
-import { ErrorCode } from '../schemas/errors'
-import type { ResultMessage } from '../schemas/messages'
+import { ErrorCode } from '../../schemas/errors'
+import type { AnswerMessage } from '../../schemas/messages'
 import {
   createFailureMessage,
   formatZodErrors,
   validateMessage,
   validateWithRetry,
-  wrapAsResultMessage,
-} from './validation'
+  wrapAsAnswerMessage,
+} from '../validation'
 
 describe('validation', () => {
   describe('validateMessage', () => {
     test('parses valid JSON message envelope', () => {
       const validMessage = {
-        type: 'result',
-        session_id: '550e8400-e29b-41d4-a716-446655440000',
+        type: 'answer',
         timestamp: '2024-01-01T00:00:00.000Z',
         payload: {
           agent_id: 'coder',
@@ -26,7 +25,7 @@ describe('validation', () => {
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.message.type).toBe('result')
+        expect(result.message.type).toBe('answer')
       }
     })
 
@@ -42,8 +41,8 @@ describe('validation', () => {
 
     test('returns error for invalid schema', () => {
       const invalidMessage = {
-        type: 'result',
-        // missing session_id, timestamp, payload
+        type: 'answer',
+        // missing timestamp, payload
       }
 
       const result = validateMessage(JSON.stringify(invalidMessage))
@@ -55,19 +54,18 @@ describe('validation', () => {
     })
   })
 
-  describe('wrapAsResultMessage', () => {
-    test('wraps plain text as ResultMessage envelope', () => {
+  describe('wrapAsAnswerMessage', () => {
+    test('wraps plain text as AnswerMessage envelope', () => {
       const text = 'Here is my response'
       const agentId = 'researcher'
 
-      const result = wrapAsResultMessage(text, agentId)
+      const result = wrapAsAnswerMessage(text, agentId)
 
-      expect(result.type).toBe('result')
+      expect(result.type).toBe('answer')
       expect(result.payload.agent_id).toBe(agentId)
       expect(result.payload.content).toBe(text)
-      expect(result.session_id).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-      )
+      // Response messages don't have session_id
+      expect((result as Record<string, unknown>).session_id).toBeUndefined()
       expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     })
   })
@@ -84,6 +82,8 @@ describe('validation', () => {
       expect(result.payload.code).toBe('VALIDATION_ERROR')
       expect(result.payload.message).toBe('Something went wrong')
       expect(result.payload.cause).toBe('Detailed cause')
+      // Response messages don't have session_id
+      expect((result as Record<string, unknown>).session_id).toBeUndefined()
     })
 
     test('creates failure envelope without cause', () => {
@@ -118,9 +118,8 @@ describe('validation', () => {
 
   describe('validateWithRetry', () => {
     test('returns valid message on first attempt', async () => {
-      const validMessage: ResultMessage = {
-        type: 'result',
-        session_id: '550e8400-e29b-41d4-a716-446655440000',
+      const validMessage: AnswerMessage = {
+        type: 'answer',
         timestamp: '2024-01-01T00:00:00.000Z',
         payload: {
           agent_id: 'coder',
@@ -130,7 +129,7 @@ describe('validation', () => {
 
       const result = await validateWithRetry(JSON.stringify(validMessage), 'coder')
 
-      expect(result.type).toBe('result')
+      expect(result.type).toBe('answer')
     })
 
     test('wraps plain text when wrapPlainText is enabled', async () => {
@@ -141,8 +140,8 @@ describe('validation', () => {
         wrapPlainText: true,
       })
 
-      expect(result.type).toBe('result')
-      if (result.type === 'result') {
+      expect(result.type).toBe('answer')
+      if (result.type === 'answer') {
         expect(result.payload.content).toBe(plainText)
         expect(result.payload.agent_id).toBe('researcher')
       }
@@ -161,9 +160,8 @@ describe('validation', () => {
 
     test('retries on invalid JSON and succeeds on correction', async () => {
       let attempts = 0
-      const validMessage: ResultMessage = {
-        type: 'result',
-        session_id: '550e8400-e29b-41d4-a716-446655440000',
+      const validMessage: AnswerMessage = {
+        type: 'answer',
         timestamp: '2024-01-01T00:00:00.000Z',
         payload: {
           agent_id: 'coder',
@@ -184,7 +182,7 @@ describe('validation', () => {
       )
 
       expect(attempts).toBe(1)
-      expect(result.type).toBe('result')
+      expect(result.type).toBe('answer')
     })
 
     test('returns failure after maxRetries exhausted', async () => {

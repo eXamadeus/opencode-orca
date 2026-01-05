@@ -1,4 +1,4 @@
-import type { OrcaSettings } from './config'
+import type { OrcaSettings, ResponseType } from './config'
 
 /**
  * Validation configuration for message handling
@@ -6,16 +6,21 @@ import type { OrcaSettings } from './config'
 export interface ValidationConfig {
   /** Max retries for validation failures before returning error (default: 2) */
   maxRetries: number
-  /** Wrap plain text responses as ResultMessage envelopes (default: true) */
+  /** Wrap plain text responses as AnswerMessage envelopes (default: true) */
   wrapPlainText: boolean
 }
+
+/**
+ * Default response types for specialist agents
+ */
+export const DEFAULT_RESPONSE_TYPES: ResponseType[] = ['answer', 'failure']
 
 /**
  * Default validation configuration
  */
 export const DEFAULT_VALIDATION_CONFIG: ValidationConfig = {
   maxRetries: 2,
-  wrapPlainText: true,
+  wrapPlainText: false, // TODO: we need to test this out more
 }
 
 /**

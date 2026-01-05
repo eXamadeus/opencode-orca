@@ -57,10 +57,10 @@ export function isAgentSupervised(
 
 /**
  * Create a checkpoint message for a supervised agent
+ * Note: Checkpoint is a response message (no session_id)
  */
 export function createCheckpointMessage(task: TaskMessage): CheckpointMessage {
   return {
-    session_id: task.session_id,
     timestamp: new Date().toISOString(),
     type: 'checkpoint',
     payload: {

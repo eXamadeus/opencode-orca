@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import type { PluginInput } from '@opencode-ai/plugin'
 import type { Config } from '@opencode-ai/sdk'
-import { DEFAULT_AGENTS } from './agents'
-import { createOrcaPlugin } from './index'
+import { DEFAULT_AGENTS } from '../agents'
+import { createOrcaPlugin } from '../index'
 
 // Mock the plugin input - using type assertion to avoid needing full mock
 const createMockInput = (directory: string): PluginInput =>
