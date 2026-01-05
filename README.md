@@ -1,15 +1,18 @@
-# opencode-orca &#x1FACD;
+# opencode-orca 🪼
 
 OpenCode plugin for safe and effective agent orchestration.
 
-## Overview
+## Requirements
 
-This plugin provides a structured agent orchestration system with:
+- [OpenCode](https://opencode.ai) ^1.0.0
+- [Bun](https://bun.sh) runtime
 
-- **Type-enforced contracts** via Zod discriminated union validation
-- **State machine orchestration** (IDLE/EXECUTING) with human-in-the-loop gates
-- **Session continuity** between agents via session_id tracking
-- **Per-agent supervision** with checkpoint protocol for approval gates
+## Features
+
+- **Type-enforced contracts** - Zod discriminated union validation for all agent messages
+- **State machine orchestration** - IDLE/EXECUTING states with human-in-the-loop gates
+- **Session continuity** - Persistent context between agents via session_id tracking
+- **Per-agent supervision** - Checkpoint protocol for approval gates on sensitive operations
 
 ## Architecture
 
@@ -30,28 +33,13 @@ User Input
          └── Architect
 ```
 
-
 ## Installation
-
-The easiest way to install is using the CLI:
 
 ```bash
 bunx @ex-machina/opencode-orca@latest install
 ```
 
-This will:
-1. Add `@ex-machina/opencode-orca` to the `plugin` array in your `opencode.jsonc`
-2. Create a default configuration file at `.opencode/orca.json`
-
-### Manual Installation
-
-Alternatively, add to your `opencode.jsonc` manually:
-
-```json
-{
-  "plugin": ["@ex-machina/opencode-orca"]
-}
-```
+See [Getting Started](docs/getting-started.md) for verification steps and first use.
 
 ## Configuration
 
@@ -66,68 +54,21 @@ Create `.opencode/orca.json` to customize behavior:
   "agents": {
     "coder": {
       "supervised": true
-    },
-    "my-specialist": {
-      "mode": "subagent",
-      "description": "Custom specialist agent",
-      "prompt": "You are a custom specialist..."
     }
   }
 }
 ```
 
-### Supervision
+See [Configuration](docs/configuration.md) for the full reference.
 
-Agents can be marked as "supervised" to require user approval before dispatch:
+## Documentation
 
-- **Per-agent**: Set `supervised: true` on specific agents
-- **Global default**: Set `settings.defaultSupervised: true` for all agents
-
-When dispatching to a supervised agent, the plugin returns a `checkpoint` message instead of executing. The orchestrator (Orca) presents this to the user for approval before proceeding.
-
-## CLI Commands
-
-### `opencode-orca install`
-
-Installs the Orca plugin into your OpenCode project.
-
-```bash
-bunx @ex-machina/opencode-orca install [options]
-
-Options:
-  --force, -f    Force reinstall even if already installed
-```
-
-### `opencode-orca uninstall`
-
-Removes the Orca plugin from your OpenCode project.
-
-```bash
-bunx @ex-machina/opencode-orca uninstall [options]
-
-Options:
-  --remove-config, -r    Remove .opencode/orca.json without prompting
-  --keep-config, -k      Keep .opencode/orca.json without prompting
-```
-
-### `opencode-orca init`
-
-Creates only the `.opencode/orca.json` configuration file without modifying `opencode.jsonc`. Useful for customizing the config before installing.
-
-```bash
-bunx @ex-machina/opencode-orca init [options]
-
-Options:
-  --force, -f    Overwrite existing configuration
-```
-
-### `opencode-orca --help`
-
-Shows help information.
-
-### `opencode-orca --version`
-
-Shows the installed version.
+- [Getting Started](docs/getting-started.md) - Quick start guide
+- [Configuration](docs/configuration.md) - Full orca.json reference
+- [Architecture](docs/architecture.md) - System design and decisions
+- [Custom Agents](docs/custom-agents.md) - Creating custom agents
+- [Supervision](docs/supervision.md) - Checkpoint and HITL model
+- [Troubleshooting](docs/troubleshooting.md) - Common issues
 
 ## Development
 
