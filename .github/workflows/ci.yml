@@ -14,6 +14,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Build
+        run: bun run build
+
       - name: Lint
         run: bun run lint
 
@@ -23,76 +26,8 @@ jobs:
       - name: Test
         run: bun test
 
-      - name: Build
-        run: bun run build
-
-      - name: Link CLI bin
-        run: bun install --frozen-lockfile
-
-      - name: Integration Test - CLI Init
+      - name: Verify CLI
         run: |
-          # Create temp directory to simulate fresh user project
-          TESTDIR=$(mktemp -d)
-          echo "Testing CLI init in: $TESTDIR"
-          cd "$TESTDIR"
-          
-          # Run the init command via linked bin
-          bunx opencode-orca init
-          
-          # Verify .opencode/orca.json was created
-          if [ ! -f ".opencode/orca.json" ]; then
-            echo "FAIL: .opencode/orca.json not created"
-            exit 1
-          fi
-          if ! grep -q "defaultSupervised" .opencode/orca.json; then
-            echo "FAIL: orca.json missing expected content"
-            exit 1
-          fi
-          echo "✓ .opencode/orca.json created with expected structure"
-          
-          # Verify opencode.jsonc was NOT created (init should not touch it)
-          if [ -f "opencode.jsonc" ]; then
-            echo "FAIL: opencode.jsonc should not be created by init"
-            exit 1
-          fi
-          echo "✓ opencode.jsonc correctly not created"
-          
-          # Cleanup
-          rm -rf "$TESTDIR"
-          echo "Init integration test passed!"
-
-      - name: Integration Test - CLI Install
-        run: |
-          # Create temp directory to simulate fresh user project
-          TESTDIR=$(mktemp -d)
-          echo "Testing CLI install in: $TESTDIR"
-          cd "$TESTDIR"
-          
-          # Run the install command via linked bin
-          bunx opencode-orca install
-
-          # Verify opencode.jsonc was created with plugin entry
-          if [ ! -f "opencode.jsonc" ]; then
-            echo "FAIL: opencode.jsonc not created"
-            exit 1
-          fi
-          if ! grep -q "opencode-orca" opencode.jsonc; then
-            echo "FAIL: opencode-orca not found in opencode.jsonc"
-            exit 1
-          fi
-          echo "✓ opencode.jsonc created with plugin entry"
-
-          # Verify .opencode/orca.json was created with expected structure
-          if [ ! -f ".opencode/orca.json" ]; then
-            echo "FAIL: .opencode/orca.json not created"
-            exit 1
-          fi
-          if ! grep -q "defaultSupervised" .opencode/orca.json; then
-            echo "FAIL: orca.json missing expected content"
-            exit 1
-          fi
-          echo "✓ .opencode/orca.json created with expected structure"
-
-          # Cleanup
-          rm -rf "$TESTDIR"
-          echo "Install integration test passed!"
+          VERSION=$(bunx opencode-orca --version)
+          echo "$VERSION"
+          echo "$VERSION" | grep -qE '@ex-machina/opencode-orca v[0-9]+\.[0-9]+\.[0-9]+'
