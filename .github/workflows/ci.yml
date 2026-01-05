@@ -11,6 +11,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
 
+      - name: Register package link
+        run: bun link
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
