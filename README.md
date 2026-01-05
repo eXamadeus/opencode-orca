@@ -14,7 +14,7 @@ This plugin provides a structured agent orchestration system with:
 ## Architecture
 
 ```
-User Inputa
+User Input
     │
     ▼
   Orca (Orchestrator)
