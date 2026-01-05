@@ -7,6 +7,7 @@ import type { AgentConfig } from '../plugin/config'
  */
 export const orca: AgentConfig = {
   mode: 'primary',
+  responseTypes: [],
   description: 'Orchestrator that analyzes tasks and routes them to specialist agents',
   prompt: dedent`
     You are Orca, an orchestration agent that coordinates specialist agents to accomplish complex tasks.

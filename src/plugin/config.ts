@@ -22,6 +22,14 @@ export const PermissionConfigSchema = z.strictObject({
 export type PermissionConfig = z.infer<typeof PermissionConfigSchema>
 
 /**
+ * Response types that agents can produce
+ * Used to generate format instructions in prompts
+ */
+export const ResponseTypeSchema = z.enum(['answer', 'plan', 'question', 'escalation', 'failure'])
+
+export type ResponseType = z.infer<typeof ResponseTypeSchema>
+
+/**
  * Agent configuration that can be provided by users
  * Matches OpenCode's AgentConfig structure
  */
@@ -42,6 +50,12 @@ export const AgentConfigSchema = z.looseObject({
   permission: PermissionConfigSchema.optional(),
   /** Whether this agent requires user approval before dispatch */
   supervised: z.boolean().optional(),
+  /**
+   * Message types this agent can respond with.
+   * Used to generate format instructions in the prompt.
+   * Defaults to ['answer', 'failure'] for subagents.
+   */
+  responseTypes: z.array(ResponseTypeSchema).optional(),
 })
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>

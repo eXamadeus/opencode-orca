@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { isNewerVersion, isStableVersion, parsePluginEntry } from './update-notifier'
+import { isNewerVersion, isStableVersion, parsePluginEntry } from '../update-notifier'
 
 describe('update-notifier', () => {
   describe('parsePluginEntry', () => {

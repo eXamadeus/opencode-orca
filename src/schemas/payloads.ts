@@ -27,17 +27,6 @@ export const TaskPayloadSchema = z.strictObject({
 export type TaskPayload = z.infer<typeof TaskPayloadSchema>
 
 /**
- * Result payload - Specialist returns completed work
- */
-export const ResultPayloadSchema = z.strictObject({
-  agent_id: AgentIdSchema,
-  content: z.string(),
-  artifacts: z.array(z.string()).optional(),
-})
-
-export type ResultPayload = z.infer<typeof ResultPayloadSchema>
-
-/**
  * Plan step schema
  */
 export const PlanStepSchema = z.strictObject({
@@ -61,12 +50,35 @@ export const PlanPayloadSchema = z.strictObject({
 export type PlanPayload = z.infer<typeof PlanPayloadSchema>
 
 /**
- * Answer payload - Response to a question
+ * Source schema - Reference to where information came from
+ */
+export const SourceSchema = z.strictObject({
+  type: z.enum(['file', 'url', 'artifact']),
+  ref: z.string(),
+  title: z.string().optional(),
+  excerpt: z.string().optional(),
+})
+
+export type Source = z.infer<typeof SourceSchema>
+
+/**
+ * Annotation schema - Meta-commentary on the response
+ */
+export const AnnotationSchema = z.strictObject({
+  type: z.enum(['note', 'warning', 'assumption', 'caveat']),
+  content: z.string(),
+})
+
+export type Annotation = z.infer<typeof AnnotationSchema>
+
+/**
+ * Answer payload - Response with optional sources and annotations
  */
 export const AnswerPayloadSchema = z.strictObject({
   agent_id: AgentIdSchema,
   content: z.string(),
-  sources: z.array(z.string()).optional(),
+  sources: z.array(SourceSchema).optional(),
+  annotations: z.array(AnnotationSchema).optional(),
 })
 
 export type AnswerPayload = z.infer<typeof AnswerPayloadSchema>

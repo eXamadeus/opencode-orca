@@ -55,7 +55,6 @@ export type {
   MessageType,
   PlanMessage,
   QuestionMessage,
-  ResultMessage,
   TaskMessage,
   UserInputMessage,
 } from './schemas/messages'
@@ -63,6 +62,7 @@ export type {
 // Payload types
 export type {
   AnswerPayload,
+  Annotation,
   CheckpointPayload,
   EscalationOption,
   EscalationPayload,
@@ -72,7 +72,7 @@ export type {
   PlanPayload,
   PlanStep,
   QuestionPayload,
-  ResultPayload,
+  Source,
   TaskPayload,
   UserInputPayload,
 } from './schemas/payloads'

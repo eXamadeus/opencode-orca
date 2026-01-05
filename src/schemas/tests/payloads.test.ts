@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { ZodTypeAny } from 'zod'
 import {
+  AnnotationSchema,
   AnswerPayloadSchema,
   CheckpointPayloadSchema,
   EscalationOptionSchema,
@@ -11,21 +12,22 @@ import {
   PlanPayloadSchema,
   PlanStepSchema,
   QuestionPayloadSchema,
-  ResultPayloadSchema,
+  SourceSchema,
   TaskPayloadSchema,
   UserInputPayloadSchema,
-} from './payloads'
+} from '../payloads'
 
 // Valid fixtures for strict mode tests
 const validFixtures: [string, ZodTypeAny, Record<string, unknown>][] = [
   ['TaskPayloadSchema', TaskPayloadSchema, { agent_id: 'a', prompt: 'p' }],
-  ['ResultPayloadSchema', ResultPayloadSchema, { agent_id: 'a', content: 'c' }],
   ['PlanStepSchema', PlanStepSchema, { description: 'd' }],
   [
     'PlanPayloadSchema',
     PlanPayloadSchema,
     { agent_id: 'a', goal: 'g', steps: [{ description: 'd' }] },
   ],
+  ['SourceSchema', SourceSchema, { type: 'file', ref: 'src/index.ts' }],
+  ['AnnotationSchema', AnnotationSchema, { type: 'note', content: 'n' }],
   ['AnswerPayloadSchema', AnswerPayloadSchema, { agent_id: 'a', content: 'c' }],
   [
     'QuestionPayloadSchema',
@@ -203,5 +205,100 @@ describe('TaskPayloadSchema with plan_context', () => {
   test('accepts task payload without plan_context', () => {
     const payload = { agent_id: 'coder', prompt: 'Write code' }
     expect(TaskPayloadSchema.parse(payload)).toEqual(payload)
+  })
+})
+
+describe('SourceSchema', () => {
+  test('accepts file source', () => {
+    const source = { type: 'file' as const, ref: 'src/index.ts' }
+    expect(SourceSchema.parse(source)).toEqual(source)
+  })
+
+  test('accepts url source', () => {
+    const source = { type: 'url' as const, ref: 'https://example.com' }
+    expect(SourceSchema.parse(source)).toEqual(source)
+  })
+
+  test('accepts artifact source', () => {
+    const source = { type: 'artifact' as const, ref: 'output.json' }
+    expect(SourceSchema.parse(source)).toEqual(source)
+  })
+
+  test('accepts optional fields', () => {
+    const source = {
+      type: 'file' as const,
+      ref: 'src/index.ts',
+      title: 'Main entry',
+      excerpt: 'lines 1-10',
+    }
+    expect(SourceSchema.parse(source)).toEqual(source)
+  })
+
+  test('rejects invalid type', () => {
+    expect(() => SourceSchema.parse({ type: 'invalid', ref: 'test' })).toThrow()
+  })
+})
+
+describe('AnnotationSchema', () => {
+  test('accepts note annotation', () => {
+    const annotation = { type: 'note' as const, content: 'Important note' }
+    expect(AnnotationSchema.parse(annotation)).toEqual(annotation)
+  })
+
+  test('accepts warning annotation', () => {
+    const annotation = { type: 'warning' as const, content: 'Be careful' }
+    expect(AnnotationSchema.parse(annotation)).toEqual(annotation)
+  })
+
+  test('accepts assumption annotation', () => {
+    const annotation = { type: 'assumption' as const, content: 'Assuming X' }
+    expect(AnnotationSchema.parse(annotation)).toEqual(annotation)
+  })
+
+  test('accepts caveat annotation', () => {
+    const annotation = { type: 'caveat' as const, content: 'This may change' }
+    expect(AnnotationSchema.parse(annotation)).toEqual(annotation)
+  })
+
+  test('rejects invalid type', () => {
+    expect(() => AnnotationSchema.parse({ type: 'invalid', content: 'test' })).toThrow()
+  })
+})
+
+describe('AnswerPayloadSchema with sources and annotations', () => {
+  test('accepts answer with sources', () => {
+    const payload = {
+      agent_id: 'researcher',
+      content: 'Found the answer',
+      sources: [{ type: 'file' as const, ref: 'src/index.ts' }],
+    }
+    expect(AnswerPayloadSchema.parse(payload)).toEqual(payload)
+  })
+
+  test('accepts answer with annotations', () => {
+    const payload = {
+      agent_id: 'researcher',
+      content: 'Found the answer',
+      annotations: [{ type: 'note' as const, content: 'Verified' }],
+    }
+    expect(AnswerPayloadSchema.parse(payload)).toEqual(payload)
+  })
+
+  test('accepts answer with both sources and annotations', () => {
+    const payload = {
+      agent_id: 'researcher',
+      content: 'Found the answer',
+      sources: [{ type: 'file' as const, ref: 'src/index.ts', excerpt: 'lines 1-10' }],
+      annotations: [
+        { type: 'assumption' as const, content: 'Assuming latest version' },
+        { type: 'warning' as const, content: 'May be deprecated' },
+      ],
+    }
+    expect(AnswerPayloadSchema.parse(payload)).toEqual(payload)
+  })
+
+  test('accepts minimal answer without optional fields', () => {
+    const payload = { agent_id: 'coder', content: 'Done' }
+    expect(AnswerPayloadSchema.parse(payload)).toEqual(payload)
   })
 })

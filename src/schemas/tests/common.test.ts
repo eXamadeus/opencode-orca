@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { AgentIdSchema, BaseEnvelopeSchema, SessionIdSchema, TimestampSchema } from './common'
+import { AgentIdSchema, BaseEnvelopeSchema, SessionIdSchema, TimestampSchema } from '../common'
 
 describe('common schemas', () => {
   test('SessionIdSchema rejects invalid UUID format', () => {

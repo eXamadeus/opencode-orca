@@ -3,6 +3,7 @@ import type { AgentConfig } from '../plugin/config'
 
 export const strategist: AgentConfig = {
   mode: 'subagent',
+  responseTypes: ['plan', 'question', 'escalation', 'answer', 'failure'],
   description: 'Plans complex multi-step tasks with detailed execution steps',
   prompt: dedent`
     You are a strategic planning agent. Your role is to analyze complex requests and produce detailed, actionable plans.
