@@ -11,66 +11,17 @@ jobs:
       - uses: actions/checkout@v6
       - uses: jdx/mise-action@v3
 
-      # Step 1: Register the package globally via bun link
       - name: Link package
         run: bun link
 
-      # Step 2: Install dependencies (should pick up the link)
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # Step 3: Build the CLI (creates dist/cli.js)
       - name: Build
         run: bun run build
 
-      # Step 4: Re-install to create bin symlinks after build
       - name: Re-install (post-build bin setup)
         run: bun install
-
-      # Diagnostic: What's in node_modules/.bin?
-      - name: Debug - List bin directory
-        run: |
-          echo "=== Contents of node_modules/.bin/ ==="
-          ls -la node_modules/.bin/ || echo "No .bin directory"
-          echo ""
-          echo "=== Looking for opencode-orca ==="
-          ls -la node_modules/.bin/opencode-orca* 2>/dev/null || echo "No opencode-orca bin found"
-
-      # Diagnostic: What does the bin symlink point to?
-      - name: Debug - Bin symlink target
-        run: |
-          echo "=== Symlink resolution ==="
-          readlink -f node_modules/.bin/opencode-orca 2>/dev/null || echo "Cannot resolve symlink"
-          echo ""
-          echo "=== Cat the bin file (first 20 lines) ==="
-          head -20 node_modules/.bin/opencode-orca 2>/dev/null || echo "Cannot read bin file"
-
-      # Diagnostic: Does dist/cli.js exist?
-      - name: Debug - Check dist/cli.js
-        run: |
-          echo "=== Does dist/cli.js exist? ==="
-          ls -la dist/cli.js 2>/dev/null || echo "dist/cli.js NOT FOUND"
-          echo ""
-          echo "=== First line of dist/cli.js (shebang?) ==="
-          head -1 dist/cli.js 2>/dev/null || echo "Cannot read"
-
-      # Diagnostic: bun pm ls - what packages are installed?
-      - name: Debug - Package manager state
-        run: |
-          echo "=== bun pm ls (looking for @ex-machina) ==="
-          bun pm ls 2>/dev/null | grep -i "ex-machina" || echo "Package not found in bun pm ls"
-          echo ""
-          echo "=== Full bun pm ls ==="
-          bun pm ls 2>/dev/null | head -50
-
-      # Diagnostic: Check the linked package
-      - name: Debug - Check linked packages
-        run: |
-          echo "=== Global bun link list ==="
-          ls -la ~/.bun/install/global/node_modules/ 2>/dev/null || echo "No global modules"
-          echo ""
-          echo "=== node_modules/@ex-machina ==="
-          ls -la node_modules/@ex-machina/ 2>/dev/null || echo "No @ex-machina in node_modules"
 
       - name: Lint
         run: bun run lint
@@ -81,17 +32,8 @@ jobs:
       - name: Test
         run: bun test
 
-      # Verify CLI with bunx --no-install (should error if not found locally)
-      - name: Verify CLI (bunx --no-install)
+      - name: Verify CLI
         run: |
-          echo "=== Attempting bunx --no-install ==="
-          VERSION=$(bunx --no-install @ex-machina/opencode-orca --version 2>&1) || {
-            echo "bunx --no-install failed with exit code $?"
-            echo "Output was: $VERSION"
-            echo ""
-            echo "=== Fallback: Try direct execution ==="
-            ./node_modules/.bin/opencode-orca --version || echo "Direct execution also failed"
-            exit 1
-          }
+          VERSION=$(bunx --no-install @ex-machina/opencode-orca --version)
           echo "$VERSION"
           echo "$VERSION" | grep -qE '@ex-machina/opencode-orca v[0-9]+\.[0-9]+\.[0-9]+'
