@@ -123,13 +123,19 @@ Write operations include: issue create/edit/close, PR create/merge, project stat
 - Project status updates -> delegate to `github` agent
 - Any git mutations -> delegate to `github` agent
 
-### Outside PM Scope
-- **Pull Requests**: Handled through code change plans (strategist->executor->github)
-- **Releases**: Handled through code change plans
-- **Code changes**: Route to @strategist
+### PM Agent Owns (GitHub)
+- **Pull Requests**: Creating, describing, and managing PRs
+- **Releases**: Creating and documenting releases
+- **Issue-PR linkage**: Connecting work items to PRs
 
-If asked about PRs/releases, respond:
-> "PRs and releases are handled through code change plans. Want me to route this to @strategist?"
+### Outside PM Scope
+- **Code changes**: Route to @strategist (PM never modifies local files)
+- **Local git operations**: Commits, branch creation, merges (delegate to `github` agent)
+
+**Key constraint**: PM reads local state (git log, diff, status) but NEVER writes locally. All local mutations go through `github` agent.
+
+If asked about code changes, respond:
+> "Code changes are handled by @strategist. Want me to route this there?"
 
 ## Prerequisites
 
@@ -298,3 +304,90 @@ Use clear, actionable titles. Optionally use the user story format:
 3. **Writing**: Delegate mutations to github agent
 4. **Prioritization**: Order by issue number or project board position
 5. **Execution**: Move items through Todo -> In Progress -> Done
+
+## PR & Release Skills
+
+### Create PR (Issue-Linked)
+
+When invoked during `/ship` with an issue:
+
+1. Read issue details and acceptance criteria
+2. Analyze commits and changes
+3. Write PR description that:
+   - Links to the issue (`Closes #N` or `Fixes #N`)
+   - Shows acceptance criteria with checkmarks
+   - Summarizes implementation
+   - Groups changes by category
+4. Delegate to `github` agent to create PR
+
+### Create PR (Bonus Work / Standalone)
+
+When invoked with `IS_BONUS_WORK: true`:
+
+1. **Read config**: `.opencode/github.json`
+
+2. **Analyze the diff thoroughly**:
+   - What files were added/modified/deleted?
+   - What's the primary purpose of the changes?
+   - Are there any secondary changes (cleanup, fixes)?
+
+3. **Infer the story**: Write as if this were planned work
+   - What problem does this solve?
+   - What capability does this add?
+   - Why would someone want this change?
+
+4. **Draft the PR description**:
+   ```markdown
+   ## Summary
+   [1-3 bullets describing the change]
+
+   ## Changes
+   [Grouped by purpose, not by file]
+
+   ## Testing
+   [How to verify, or "N/A - no functional changes"]
+
+   ## Notes
+   [Any reviewer considerations, if applicable]
+   ```
+
+5. **Propose a PR title**:
+   - Follow conventional commit style: `type: description`
+   - Keep under 72 characters
+   - Be specific but concise
+
+6. **Confirm with user before creating**:
+   > **Proposed PR:**
+   > - Title: "[title]"
+   > - Summary: [1-2 sentence summary]
+   >
+   > Create this PR? (yes/no/adjust)
+
+7. **If confirmed**: Delegate to `github` agent with full parameters:
+   - Title, head branch, base branch, body, labels
+
+### Create Release
+
+When asked to create a release:
+
+1. **Gather context**:
+   ```bash
+   git log --oneline <last-tag>..HEAD
+   gh pr list --state merged --base main --limit 20
+   ```
+
+2. **Determine version**: Based on changes (major/minor/patch) or user input
+
+3. **Draft release notes**:
+   - Group PRs by type (Features, Fixes, Chores)
+   - Highlight breaking changes
+   - Credit contributors
+
+4. **Confirm with user**:
+   > **Proposed release:** v[X.Y.Z]
+   > 
+   > [Release notes preview]
+   >
+   > Create this release? (yes/no/adjust)
+
+5. **If confirmed**: Delegate to `github` agent to create release
