@@ -26,6 +26,9 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Link CLI bin
+        run: bun install --frozen-lockfile
+
       - name: Integration Test - CLI Init
         run: |
           # Create temp directory to simulate fresh user project
@@ -33,8 +36,8 @@ jobs:
           echo "Testing CLI init in: $TESTDIR"
           cd "$TESTDIR"
           
-          # Run the init command
-          node "$GITHUB_WORKSPACE/dist/cli.js" init
+          # Run the init command via linked bin
+          bunx opencode-orca init
           
           # Verify .opencode/orca.json was created
           if [ ! -f ".opencode/orca.json" ]; then
@@ -65,8 +68,8 @@ jobs:
           echo "Testing CLI install in: $TESTDIR"
           cd "$TESTDIR"
           
-          # Run the install command
-          node "$GITHUB_WORKSPACE/dist/cli.js" install
+          # Run the install command via linked bin
+          bunx opencode-orca install
 
           # Verify opencode.jsonc was created with plugin entry
           if [ ! -f "opencode.jsonc" ]; then
