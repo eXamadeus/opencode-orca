@@ -1,20 +1,22 @@
 import { describe, expect, test } from 'bun:test'
 import { DEFAULT_AGENTS, PROTECTED_AGENTS, mergeAgentConfigs } from '../agents'
 import type { AgentConfig } from '../config'
+import { RESPONSE_FORMAT_INJECTION_HEADER } from '../response-format'
 
 describe('DEFAULT_AGENTS', () => {
   test('contains all expected agents', () => {
-    const expectedAgents = [
-      'orca',
-      'strategist',
-      'coder',
-      'tester',
-      'reviewer',
-      'researcher',
-      'document-writer',
-      'architect',
-    ]
-    expect(Object.keys(DEFAULT_AGENTS).sort()).toEqual(expectedAgents.sort())
+    expect(Object.keys(DEFAULT_AGENTS).sort()).toMatchInlineSnapshot(`
+      [
+        "architect",
+        "coder",
+        "document-writer",
+        "orca",
+        "researcher",
+        "reviewer",
+        "strategist",
+        "tester",
+      ]
+    `)
   })
 
   test('orca is the primary agent', () => {
@@ -23,14 +25,14 @@ describe('DEFAULT_AGENTS', () => {
 
   test('all specialists are subagents', () => {
     const specialists = Object.entries(DEFAULT_AGENTS).filter(([id]) => id !== 'orca')
-    for (const [id, config] of specialists) {
+    for (const [_, config] of specialists) {
       expect(config.mode).toBe('subagent')
     }
   })
 
   test('all agents have valid hex colors', () => {
     const hexColorRegex = /^#[0-9A-Fa-f]{6}$/
-    for (const [id, config] of Object.entries(DEFAULT_AGENTS)) {
+    for (const [_, config] of Object.entries(DEFAULT_AGENTS)) {
       expect(config.color).toMatch(hexColorRegex)
     }
   })
@@ -47,9 +49,9 @@ describe('DEFAULT_AGENTS', () => {
       expect(config.prompt).toBeDefined()
       if (id === 'orca') {
         // Orca doesn't get response format injection
-        expect(config.prompt).not.toContain('Response Format (REQUIRED)')
+        expect(config.prompt).not.toContain(RESPONSE_FORMAT_INJECTION_HEADER)
       } else {
-        expect(config.prompt).toContain('Response Format (REQUIRED)')
+        expect(config.prompt).toContain(RESPONSE_FORMAT_INJECTION_HEADER)
       }
     }
   })

@@ -4,8 +4,8 @@ import { generateResponseFormatInstructions } from './response-format'
 import { DEFAULT_RESPONSE_TYPES } from './types'
 
 /**
- * Agents whose responseTypes cannot be overridden by user configuration.
- * These are core orchestration agents with specific response type requirements.
+ * Agents whose responseTypes cannot be overridden by certain user configuration.
+ * These are core orchestration agents with specific requirements.
  */
 export const PROTECTED_AGENTS = ['orca', 'strategist'] as const
 

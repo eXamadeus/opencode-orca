@@ -1,3 +1,4 @@
+import dedent from 'dedent'
 import type { ResponseType } from './config'
 
 /**
@@ -83,6 +84,8 @@ export const TYPE_GUIDANCE: Record<ResponseType, string> = {
   failure: 'Use when the task cannot be completed due to an error or blocker.',
 }
 
+export const RESPONSE_FORMAT_INJECTION_HEADER = '## Response Format (REQUIRED)'
+
 /**
  * Generate response format instructions for an agent prompt.
  *
@@ -109,17 +112,18 @@ export function generateResponseFormatInstructions(
     })
     .join('\n\n')
 
-  return `## Response Format (REQUIRED)
+  return dedent`
+    ${RESPONSE_FORMAT_INJECTION_HEADER}
 
-You MUST respond with a valid JSON message envelope.
-
-**Allowed response types:** ${typeList}
-
-### Type Selection Guidance
-
-${guidanceLines}
-
-### JSON Examples
-
-${examples}`
+    You MUST respond with a valid JSON message envelope.
+    
+    **Allowed response types:** ${typeList}
+    
+    ### Type Selection Guidance
+    
+    ${guidanceLines}
+    
+    ### JSON Examples
+    
+    ${examples}`
 }
