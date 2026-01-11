@@ -59,7 +59,7 @@ Orca will analyze your request, create a plan, and coordinate specialist agents 
 
 When you interact with Orca:
 
-1. **Strategist** analyzes your request and creates an execution plan
+1. **Planner** analyzes your request and creates an execution plan
 2. **You approve** the plan (or request changes)
 3. **Specialist agents** execute each step (coder, tester, reviewer, etc.)
 4. **Orca** coordinates the workflow and reports results

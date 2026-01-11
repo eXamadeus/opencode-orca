@@ -1,70 +1,86 @@
 import { describe, expect, test } from 'bun:test'
-import { generateMessageJsonSchema, generateProtocolDocumentation } from '../jsonschema'
+import { z } from 'zod'
+import { extractFieldDocs, formatFieldDocsAsMarkdownList } from '../jsonschema'
+import { PlanMessage } from '../messages'
 
-describe('generateMessageJsonSchema', () => {
-  test('generates valid JSON Schema', () => {
-    const schema = generateMessageJsonSchema() as Record<string, unknown>
+describe('extractFieldDocs', () => {
+  test('extracts field names and descriptions from PlanMessage', () => {
+    const docs = extractFieldDocs(PlanMessage, { exclude: ['type', 'timestamp', 'agent_id'] })
 
-    expect(schema).toHaveProperty('$schema')
-    expect(schema).toHaveProperty('oneOf') // discriminatedUnion becomes oneOf in Zod 4.x
+    expect(docs).toHaveLength(6)
+    expect(docs[0]).toEqual({
+      name: 'goal',
+      label: 'Goal',
+      description: 'Clear statement of what we are achieving',
+      optional: false,
+    })
+    expect(docs.find((d) => d.name === 'verification')).toEqual({
+      name: 'verification',
+      label: 'Verification',
+      description: 'How to confirm success - commands, tests, or checks to run',
+      optional: false,
+    })
   })
 
-  test('includes all message types', () => {
-    const schema = generateMessageJsonSchema() as {
-      oneOf: Array<{ properties: { type: { const: string } } }>
-    }
+  test('excludes specified fields', () => {
+    const docs = extractFieldDocs(PlanMessage, {
+      exclude: ['type', 'timestamp', 'agent_id', 'goal', 'steps'],
+    })
 
-    const types = schema.oneOf.map((opt) => opt.properties?.type?.const).filter(Boolean)
-
-    expect(types).toContain('task')
-    expect(types).toContain('plan')
-    expect(types).toContain('answer')
-    expect(types).toContain('question')
-    expect(types).toContain('escalation')
-    expect(types).toContain('user_input')
-    expect(types).toContain('interrupt')
-    expect(types).toContain('failure')
-    expect(types).toContain('checkpoint')
-    // Note: 'result' type has been removed (collapsed into 'answer')
+    expect(docs.find((d) => d.name === 'type')).toBeUndefined()
+    expect(docs.find((d) => d.name === 'timestamp')).toBeUndefined()
+    expect(docs.find((d) => d.name === 'agent_id')).toBeUndefined()
+    expect(docs.find((d) => d.name === 'goal')).toBeUndefined()
+    expect(docs.find((d) => d.name === 'steps')).toBeUndefined()
+    expect(docs.find((d) => d.name === 'verification')).toBeDefined()
   })
 
-  test('schema includes required envelope fields', () => {
-    const schema = generateMessageJsonSchema() as {
-      oneOf: Array<{ properties: Record<string, unknown>; required: string[] }>
-    }
+  test('converts snake_case to Title Case labels', () => {
+    const docs = extractFieldDocs(PlanMessage, { exclude: ['type', 'timestamp', 'agent_id'] })
 
-    // Find a request type (task) - has session_id
-    const taskType = schema.oneOf.find(
-      (opt) => (opt.properties?.type as { const: string })?.const === 'task',
-    )
-    expect(taskType?.properties).toHaveProperty('session_id')
-    expect(taskType?.properties).toHaveProperty('timestamp')
-    expect(taskType?.required).toContain('session_id')
-    expect(taskType?.required).toContain('timestamp')
+    expect(docs.find((d) => d.name === 'files_touched')?.label).toBe('Files Touched')
+  })
 
-    // Find a response type (answer) - no session_id
-    const answerType = schema.oneOf.find(
-      (opt) => (opt.properties?.type as { const: string })?.const === 'answer',
-    )
-    expect(answerType?.properties).toHaveProperty('timestamp')
-    expect(answerType?.properties).toHaveProperty('type')
-    expect(answerType?.properties).toHaveProperty('payload')
-    expect(answerType?.required).toContain('timestamp')
-    expect(answerType?.required).not.toContain('session_id')
+  test('handles schemas with optional fields', () => {
+    const TestSchema = z.strictObject({
+      required_field: z.string().describe('Required'),
+      optional_field: z.string().optional().describe('Optional'),
+    })
+
+    const docs = extractFieldDocs(TestSchema)
+
+    expect(docs.find((d) => d.name === 'required_field')?.optional).toBe(false)
+    expect(docs.find((d) => d.name === 'optional_field')?.optional).toBe(true)
+    expect(docs.find((d) => d.name === 'optional_field')?.description).toBe('Optional')
+  })
+
+  test('provides fallback description for fields without .describe()', () => {
+    const TestSchema = z.strictObject({
+      no_description: z.string(),
+    })
+
+    const docs = extractFieldDocs(TestSchema)
+    const formatted = formatFieldDocsAsMarkdownList(docs)
+
+    expect(formatted).toContain('**No Description**: The no description')
   })
 })
 
-describe('generateProtocolDocumentation', () => {
-  test('returns valid JSON string', () => {
-    const docs = generateProtocolDocumentation()
+describe('formatFieldDocsAsMarkdownList', () => {
+  test('generates numbered markdown list', () => {
+    const docs = extractFieldDocs(PlanMessage, { exclude: ['type', 'timestamp', 'agent_id'] })
+    const formatted = formatFieldDocsAsMarkdownList(docs)
 
-    expect(() => JSON.parse(docs)).not.toThrow()
+    expect(formatted).toContain('1. **Goal**:')
+    expect(formatted).toContain('2. **Steps**:')
+    expect(formatted).toContain('6. **Risks**:')
   })
 
-  test('includes schema draft version', () => {
-    const docs = generateProtocolDocumentation()
+  test('includes descriptions in output', () => {
+    const docs = extractFieldDocs(PlanMessage, { exclude: ['type', 'timestamp', 'agent_id'] })
+    const formatted = formatFieldDocsAsMarkdownList(docs)
 
-    expect(docs).toContain('$schema')
-    expect(docs).toContain('draft')
+    expect(formatted).toContain('Clear statement of what we are achieving')
+    expect(formatted).toContain('What could go wrong and how to recover/rollback')
   })
 })

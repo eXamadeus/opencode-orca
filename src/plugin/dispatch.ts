@@ -1,7 +1,5 @@
 import type { OpencodeClient, Part } from '@opencode-ai/sdk'
-import { ErrorCode } from '../schemas/errors'
-import type { CheckpointMessage, TaskMessage } from '../schemas/messages'
-import { TaskMessageSchema } from '../schemas/messages'
+import { type CheckpointMessage, TaskMessage } from '../schemas/messages'
 import type { AgentConfig, OrcaSettings } from './config'
 import type { ValidationConfig } from './types'
 import { createFailureMessage, validateWithRetry } from './validation'
@@ -20,19 +18,6 @@ export interface DispatchContext {
   settings?: OrcaSettings
   /** Abort signal for cancellation */
   abort?: AbortSignal
-}
-
-/**
- * Parse and validate incoming task message
- */
-function parseTaskMessage(messageJson: string): TaskMessage | null {
-  try {
-    const parsed = JSON.parse(messageJson)
-    const result = TaskMessageSchema.safeParse(parsed)
-    return result.success ? result.data : null
-  } catch {
-    return null
-  }
 }
 
 /**
@@ -63,25 +48,17 @@ export function createCheckpointMessage(task: TaskMessage): CheckpointMessage {
   return {
     timestamp: new Date().toISOString(),
     type: 'checkpoint',
-    payload: {
-      agent_id: task.payload.agent_id,
-      prompt: task.payload.prompt,
-      step_index: task.payload.plan_context?.step_index,
-      plan_goal: task.payload.plan_context?.goal,
-    },
+    agent_id: task.agent_id,
+    prompt: task.prompt,
+    step_index: task.plan_context?.step_index,
+    plan_goal: task.plan_context?.goal,
   }
 }
 
-/**
- * Check if a Part is a TextPart with text content
- */
 function isTextPart(part: Part): part is Part & { type: 'text'; text: string } {
   return part.type === 'text' && 'text' in part
 }
 
-/**
- * Extract text content from response parts
- */
 function extractTextFromParts(parts: Part[]): string {
   return parts
     .filter(isTextPart)
@@ -92,30 +69,32 @@ function extractTextFromParts(parts: Part[]): string {
 /**
  * Dispatch a task message to a specialist agent
  *
- * @param messageJson - JSON string of TaskMessage envelope
+ * @param unsafeTask - possible TaskMessage
  * @param ctx - Dispatch context with client, agents, and config
  * @returns JSON string of response MessageEnvelope
  */
-export async function dispatchToAgent(messageJson: string, ctx: DispatchContext): Promise<string> {
-  // Parse the incoming task message
-  const task = parseTaskMessage(messageJson)
-  if (!task) {
+export async function dispatchToAgent(
+  unsafeTask: TaskMessage,
+  ctx: DispatchContext,
+): Promise<string> {
+  const task = TaskMessage.safeParse(unsafeTask)
+  if (!task.success) {
     return JSON.stringify(
       createFailureMessage(
-        ErrorCode.VALIDATION_ERROR,
+        'VALIDATION_ERROR',
         'Invalid task message format',
         'Message must be a valid TaskMessage JSON envelope',
       ),
     )
   }
 
-  const { agent_id: targetAgentId, prompt, parent_session_id, plan_context } = task.payload
+  const { agent_id: targetAgentId, prompt, parent_session_id, plan_context } = task.data
 
   // Verify target agent exists
   if (!ctx.agents[targetAgentId]) {
     return JSON.stringify(
       createFailureMessage(
-        ErrorCode.UNKNOWN_AGENT,
+        'UNKNOWN_AGENT',
         `Unknown agent: ${targetAgentId}`,
         `Available agents: ${Object.keys(ctx.agents).join(', ')}`,
       ),
@@ -128,7 +107,7 @@ export async function dispatchToAgent(messageJson: string, ctx: DispatchContext)
 
   // Return checkpoint if supervised and not pre-approved
   if (supervised && !approvedRemaining) {
-    return JSON.stringify(createCheckpointMessage(task))
+    return JSON.stringify(createCheckpointMessage(task.data))
   }
 
   try {
@@ -145,7 +124,7 @@ export async function dispatchToAgent(messageJson: string, ctx: DispatchContext)
       if (!createResult.data?.id) {
         return JSON.stringify(
           createFailureMessage(
-            ErrorCode.SESSION_NOT_FOUND,
+            'SESSION_NOT_FOUND',
             'Failed to create session',
             'Session creation returned no ID',
           ),
@@ -171,7 +150,7 @@ export async function dispatchToAgent(messageJson: string, ctx: DispatchContext)
     if (!responseText) {
       return JSON.stringify(
         createFailureMessage(
-          ErrorCode.AGENT_ERROR,
+          'AGENT_ERROR',
           'Agent returned empty response',
           `Agent ${targetAgentId} produced no text output`,
         ),
@@ -202,15 +181,13 @@ export async function dispatchToAgent(messageJson: string, ctx: DispatchContext)
   } catch (err) {
     // Check for abort/timeout
     if (ctx.abort?.aborted) {
-      return JSON.stringify(
-        createFailureMessage(ErrorCode.TIMEOUT, 'Request timed out or was cancelled'),
-      )
+      return JSON.stringify(createFailureMessage('TIMEOUT', 'Request timed out or was cancelled'))
     }
 
     // Generic agent error
     return JSON.stringify(
       createFailureMessage(
-        ErrorCode.AGENT_ERROR,
+        'AGENT_ERROR',
         'Agent execution failed',
         err instanceof Error ? err.message : String(err),
       ),

@@ -22,7 +22,7 @@ User Input
     ▼
   Orca (Orchestrator)
     │
-    ├──► Strategist (Planning)
+    ├──► Planner (Planning)
     │
     └──► Specialists (Execution)
          ├── Coder

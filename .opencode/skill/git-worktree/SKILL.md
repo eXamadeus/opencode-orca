@@ -15,7 +15,7 @@ Use semantic prefixes based on the type of work:
 | ---------- | ------------------------------------------------- | ------------------------ |
 | `feat/`    | New functionality, enhancements, additions        | `feat/user-auth`         |
 | `fix/`     | Bug fixes, corrections, repairs                   | `fix/login-redirect`     |
-| `chore/`   | Maintenance, dependencies, config updates         | `chore/update-deps`      |
+| `enhancement/` | Maintenance, dependencies, config updates     | `enhancement/update-deps` |
 | `refactor/`| Code restructuring without behavior change        | `refactor/api-handlers`  |
 | `docs/`    | Documentation only                                | `docs/api-reference`     |
 | `test/`    | Adding or updating tests                          | `test/auth-coverage`     |

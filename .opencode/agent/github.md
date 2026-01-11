@@ -2,7 +2,6 @@
 description: Executes git and gh CLI write operations. For read operations, callers should use the github-read skill directly.
 mode: subagent
 color: "#24292e"
-model: openai/gpt-5.2-none
 permission:
   bash:
     "git *": allow
@@ -87,9 +86,16 @@ git rebase <branch>
 ### Issues
 
 ```bash
-# Create issue
+# Create issue (with assignment - default)
+gh issue create --repo <full_name> \
+  --title "<title>" --label "<label1>,<label2>" --body "<body>" --assignee @me
+
+# Create issue (without assignment)
 gh issue create --repo <full_name> \
   --title "<title>" --label "<label1>,<label2>" --body "<body>"
+
+# Assign existing issue
+gh issue edit <number> --repo <full_name> --add-assignee @me
 
 # Edit issue
 gh issue edit <number> --repo <full_name> --add-label "<label>"

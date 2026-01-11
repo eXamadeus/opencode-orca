@@ -100,7 +100,7 @@ Based on the changes, attempt to classify:
 | New files in feature area             | `feat`        | `feat/`       |
 | Bug fixes, error handling             | `fix`         | `fix/`        |
 | Documentation only                    | `docs`        | `docs/`       |
-| Config, dependencies, tooling         | `chore`       | `chore/`      |
+| Config, dependencies, tooling         | `enhancement` | `enhancement/` |
 | Restructuring without behavior change | `refactor`    | `refactor/`   |
 | Mixed or unclear                      | **STOP AND ASK** | —          |
 
@@ -115,14 +115,14 @@ From the changes, derive a 3-5 word kebab-case description:
 
 **Before proceeding, evaluate confidence in these decisions:**
 
-1. **Work type**: Can you clearly identify feat/fix/docs/chore/refactor?
+1. **Work type**: Can you clearly identify feat/fix/docs/enhancement/refactor?
 2. **Branch name**: Does the generated slug accurately describe the changes?
 3. **Scope**: Are the changes cohesive (single purpose)?
 
 **If ANY of the following are true → STOP AND ASK:**
 
 - Changes span multiple unrelated areas (mixed purposes)
-- Cannot determine if this is a feature, fix, or chore
+- Cannot determine if this is a feature, fix, or enhancement
 - Generated branch name feels vague or inaccurate
 - Changes are large/complex without clear theme
 - Any other uncertainty about how to proceed
@@ -138,7 +138,7 @@ From the changes, derive a 3-5 word kebab-case description:
 > - [specific uncertainty, e.g., "Can't tell if this is a fix or refactor"]
 > 
 > **Please tell me:**
-> 1. Work type: feat / fix / docs / chore / refactor
+> 1. Work type: feat / fix / docs / enhancement / refactor
 > 2. Short description: (3-5 words for branch name)
 > 
 > Or provide a full branch name like `feat/add-new-feature`
@@ -325,7 +325,7 @@ Provide a brief summary of what the changes accomplish:
 | `feat`          | `feat`        |
 | `feature`       | `feat`        |
 | `fix`           | `fix`         |
-| `chore`         | `chore`       |
+| `enhancement`   | `enhancement` |
 | `docs`          | `docs`        |
 | `refactor`      | `refactor`    |
 | (other)       | `feat`        |
@@ -421,7 +421,7 @@ The PM will:
    - **Title**: ISSUE_TITLE verbatim
    - **Head branch**: current branch name
    - **Base branch**: `main`
-   - **Labels**: From ISSUE_LABELS (filter to: `feature`, `bug`, `chore`)
+   - **Labels**: From ISSUE_LABELS (filter to: `feature`, `bug`, `enhancement`)
    - **Body**: The crafted description
 
 ---

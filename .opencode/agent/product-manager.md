@@ -129,13 +129,13 @@ Write operations include: issue create/edit/close, PR create/merge, project stat
 - **Issue-PR linkage**: Connecting work items to PRs
 
 ### Outside PM Scope
-- **Code changes**: Route to @strategist (PM never modifies local files)
+- **Code changes**: Route to @planner (PM never modifies local files)
 - **Local git operations**: Commits, branch creation, merges (delegate to `github` agent)
 
 **Key constraint**: PM reads local state (git log, diff, status) but NEVER writes locally. All local mutations go through `github` agent.
 
 If asked about code changes, respond:
-> "Code changes are handled by @strategist. Want me to route this there?"
+> "Code changes are handled by @planner. Want me to route this there?"
 
 ## Prerequisites
 
@@ -157,7 +157,7 @@ gh extension install yahsan2/gh-sub-issue
 | `epic`    | Larger effort with sub-issues |
 | `bug`     | Something broken              |
 | `feature` | New functionality             |
-| `chore`   | Maintenance/cleanup           |
+| `enhancement` | Enhancements, maintenance, cleanup |
 
 ### Project Board Statuses
 | Status      | Meaning                         |
@@ -166,6 +166,19 @@ gh extension install yahsan2/gh-sub-issue
 | In Progress | Actively being worked           |
 | In Review   | PR created, awaiting review     |
 | Done        | Completed                       |
+
+### Default Assignment
+
+**All newly created issues are assigned to @me by default.**
+
+Only skip assignment if the user EXPLICITLY requests it with phrases like:
+- "don't assign this"
+- "leave unassigned"
+- "for the team to pick up"
+- "unassigned issue"
+
+If the user's intent is ambiguous (e.g., "create some issues for the backlog"), ask:
+> "Should I assign these issues to you, or leave them unassigned for the team?"
 
 ## Operations
 
@@ -203,6 +216,9 @@ Delegate to github agent:
 > - Title: "[title]"
 > - Labels: [label1, label2]
 > - Body: [content]
+> - Assignee: @me
+
+*Omit Assignee only if user explicitly requested no assignment.*
 
 ### Create Epic (Delegate)
 
@@ -211,6 +227,9 @@ Delegate to github agent:
 > - Title: "Epic: [Name]"
 > - Labels: epic
 > - Body: "## Goal\n\n## Success Criteria\n\n## Tasks\nSub-issues will be linked below."
+> - Assignee: @me
+
+*Omit Assignee only if user explicitly requested no assignment.*
 
 ### Create Sub-issue (Delegate)
 
@@ -218,6 +237,9 @@ Delegate to github agent:
 > Create sub-issue under epic #[N]:
 > - Title: "[title]"
 > - Labels: [labels]
+> - Assignee: @me
+
+*Omit Assignee only if user explicitly requested no assignment.*
 
 ### Add Existing Issue as Sub-issue (Delegate)
 
@@ -262,10 +284,12 @@ When asked "What am I working on?" or "What's the current status?":
 
 When asked to create an epic with tasks:
 
-1. Delegate to github agent: Create parent issue with epic label
-2. For each task, delegate to github agent: Create sub-issue under the epic
+1. Delegate to github agent: Create parent issue with epic label, assigned to @me
+2. For each task, delegate to github agent: Create sub-issue under the epic, assigned to @me
 3. Delegate to github agent: Add all issues to project board
 4. Report the created structure with issue numbers
+
+*All issues assigned to @me unless user explicitly requested no assignment.*
 
 ### Start Work on Issue
 
@@ -287,9 +311,11 @@ When asked to mark an issue done:
 
 When asked to park something for later:
 
-1. Delegate to github agent: Create issue with title, label: chore, body with context
+1. Delegate to github agent: Create issue with title, label: enhancement, body with context, assigned to @me
 2. Delegate to github agent: Add issue to project board (status: Todo)
 3. Confirm the parked idea with issue number
+
+*Assigned to @me unless user explicitly requested no assignment.*
 
 ## Story Format
 

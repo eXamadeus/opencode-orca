@@ -1,31 +1,18 @@
 import type { ZodError } from 'zod'
-import { ErrorCode } from '../schemas/errors'
-import {
-  type AnswerMessage,
-  type FailureMessage,
-  type MessageEnvelope,
-  MessageEnvelopeSchema,
-} from '../schemas/messages'
+import type { AgentId } from '../schemas/common'
+import type { ErrorCode } from '../schemas/errors'
+import { type AnswerMessage, type FailureMessage, MessageEnvelope } from '../schemas/messages'
 import type { ValidationConfig } from './types'
 import { DEFAULT_VALIDATION_CONFIG } from './types'
 
-/**
- * Result of a validation attempt
- */
 export type ValidationResult =
   | { success: true; message: MessageEnvelope }
   | { success: false; error: string; retryable: boolean }
 
-/**
- * Generate current ISO8601 timestamp
- */
 function nowTimestamp(): string {
   return new Date().toISOString()
 }
 
-/**
- * Format Zod validation errors into a human-readable correction prompt
- */
 export function formatZodErrors(error: ZodError): string {
   const issues = error.issues
     .map((issue) => {
@@ -37,44 +24,30 @@ export function formatZodErrors(error: ZodError): string {
   return `Message validation failed:\n${issues}\n\nPlease correct the message format and try again.`
 }
 
-/**
- * Wrap plain text content as an AnswerMessage envelope
- */
 export function wrapAsAnswerMessage(content: string, agentId: string): AnswerMessage {
   return {
     type: 'answer',
     timestamp: nowTimestamp(),
-    payload: {
-      agent_id: agentId,
-      content,
-    },
+    agent_id: agentId,
+    content,
   }
 }
 
-/**
- * Create a FailureMessage envelope for validation errors
- */
 export function createFailureMessage(
-  code: (typeof ErrorCode)[keyof typeof ErrorCode],
+  code: ErrorCode,
   message: string,
   cause?: string,
 ): FailureMessage {
   return {
     type: 'failure',
     timestamp: nowTimestamp(),
-    payload: {
-      code,
-      message,
-      cause,
-    },
+    code,
+    message,
+    cause,
   }
 }
 
-/**
- * Attempt to validate a raw response string as a MessageEnvelope
- */
 export function validateMessage(raw: string): ValidationResult {
-  // Step 1: Try to parse as JSON
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
@@ -86,8 +59,7 @@ export function validateMessage(raw: string): ValidationResult {
     }
   }
 
-  // Step 2: Validate against schema
-  const result = MessageEnvelopeSchema.safeParse(parsed)
+  const result = MessageEnvelope.safeParse(parsed)
   if (result.success) {
     return { success: true, message: result.data }
   }
@@ -99,9 +71,6 @@ export function validateMessage(raw: string): ValidationResult {
   }
 }
 
-/**
- * Check if a string looks like plain text (not JSON)
- */
 function isPlainText(raw: string): boolean {
   const trimmed = raw.trim()
   // JSON must start with { or [
@@ -141,7 +110,7 @@ export async function validateWithRetry(
     // Can't retry without a sender, or exhausted retries
     if (!retrySender || attempts >= config.maxRetries) {
       return createFailureMessage(
-        ErrorCode.VALIDATION_ERROR,
+        'VALIDATION_ERROR',
         `Message validation failed after ${attempts + 1} attempt(s)`,
         result.error,
       )
@@ -154,7 +123,7 @@ export async function validateWithRetry(
 
   // Should not reach here, but safety fallback
   return createFailureMessage(
-    ErrorCode.VALIDATION_ERROR,
+    'VALIDATION_ERROR',
     'Message validation failed',
     'Exceeded maximum retry attempts',
   )

@@ -28,3 +28,6 @@ coverage/
 
 # Worktrees
 worktrees/
+
+# Temporary Directory
+/tmp

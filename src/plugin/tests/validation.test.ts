@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test'
-import { ErrorCode } from '../../schemas/errors'
 import type { AnswerMessage } from '../../schemas/messages'
 import {
   createFailureMessage,
@@ -15,10 +14,8 @@ describe('validation', () => {
       const validMessage = {
         type: 'answer',
         timestamp: '2024-01-01T00:00:00.000Z',
-        payload: {
-          agent_id: 'coder',
-          content: 'Task completed successfully',
-        },
+        agent_id: 'coder',
+        content: 'Task completed successfully',
       }
 
       const result = validateMessage(JSON.stringify(validMessage))
@@ -42,7 +39,7 @@ describe('validation', () => {
     test('returns error for invalid schema', () => {
       const invalidMessage = {
         type: 'answer',
-        // missing timestamp, payload
+        // missing timestamp, agent_id, content
       }
 
       const result = validateMessage(JSON.stringify(invalidMessage))
@@ -62,8 +59,8 @@ describe('validation', () => {
       const result = wrapAsAnswerMessage(text, agentId)
 
       expect(result.type).toBe('answer')
-      expect(result.payload.agent_id).toBe(agentId)
-      expect(result.payload.content).toBe(text)
+      expect(result.agent_id).toBe(agentId)
+      expect(result.content).toBe(text)
       // Response messages don't have session_id
       expect((result as Record<string, unknown>).session_id).toBeUndefined()
       expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/)
@@ -73,26 +70,26 @@ describe('validation', () => {
   describe('createFailureMessage', () => {
     test('creates failure envelope with all fields', () => {
       const result = createFailureMessage(
-        ErrorCode.VALIDATION_ERROR,
+        'VALIDATION_ERROR',
         'Something went wrong',
         'Detailed cause',
       )
 
       expect(result.type).toBe('failure')
-      expect(result.payload.code).toBe('VALIDATION_ERROR')
-      expect(result.payload.message).toBe('Something went wrong')
-      expect(result.payload.cause).toBe('Detailed cause')
+      expect(result.code).toBe('VALIDATION_ERROR')
+      expect(result.message).toBe('Something went wrong')
+      expect(result.cause).toBe('Detailed cause')
       // Response messages don't have session_id
       expect((result as Record<string, unknown>).session_id).toBeUndefined()
     })
 
     test('creates failure envelope without cause', () => {
-      const result = createFailureMessage(ErrorCode.TIMEOUT, 'Request timed out')
+      const result = createFailureMessage('TIMEOUT', 'Request timed out')
 
       expect(result.type).toBe('failure')
-      expect(result.payload.code).toBe('TIMEOUT')
-      expect(result.payload.message).toBe('Request timed out')
-      expect(result.payload.cause).toBeUndefined()
+      expect(result.code).toBe('TIMEOUT')
+      expect(result.message).toBe('Request timed out')
+      expect(result.cause).toBeUndefined()
     })
   })
 
@@ -121,10 +118,8 @@ describe('validation', () => {
       const validMessage: AnswerMessage = {
         type: 'answer',
         timestamp: '2024-01-01T00:00:00.000Z',
-        payload: {
-          agent_id: 'coder',
-          content: 'Done',
-        },
+        agent_id: 'coder',
+        content: 'Done',
       }
 
       const result = await validateWithRetry(JSON.stringify(validMessage), 'coder')
@@ -142,8 +137,8 @@ describe('validation', () => {
 
       expect(result.type).toBe('answer')
       if (result.type === 'answer') {
-        expect(result.payload.content).toBe(plainText)
-        expect(result.payload.agent_id).toBe('researcher')
+        expect(result.content).toBe(plainText)
+        expect(result.agent_id).toBe('researcher')
       }
     })
 
@@ -163,10 +158,8 @@ describe('validation', () => {
       const validMessage: AnswerMessage = {
         type: 'answer',
         timestamp: '2024-01-01T00:00:00.000Z',
-        payload: {
-          agent_id: 'coder',
-          content: 'Corrected response',
-        },
+        agent_id: 'coder',
+        content: 'Corrected response',
       }
 
       const retrySender = async (_correction: string): Promise<string> => {
@@ -203,7 +196,7 @@ describe('validation', () => {
       expect(attempts).toBe(2)
       expect(result.type).toBe('failure')
       if (result.type === 'failure') {
-        expect(result.payload.code).toBe('VALIDATION_ERROR')
+        expect(result.code).toBe('VALIDATION_ERROR')
       }
     })
 

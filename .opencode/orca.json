@@ -1,15 +1,20 @@
 {
   "settings": {
     "defaultSupervised": false,
-    "defaultModel": "anthropic/claude-sonnet-4",
-    "validation": {
-      "maxRetries": 3,
-      "wrapPlainText": true
-    }
+    "defaultModel": {
+      "model": "openai/gpt-5.2",
+      "reasoningEffort": "low",
+      "reasoningSummary": "auto",
+      "textVerbosity": "medium"
+    },
+    "validation": { "maxRetries": 3, "wrapPlainText": true }
   },
   "agents": {
-    "orca": { "model": "openai/gpt-5.1-codex-mini" },
-    "strategist": { "model": "anthropic/claude-opus-4-5" },
+    "executor": { "model": "anthropic/claude-opus-4-5" },
+    "strategist": { "mode": "subagent" },
+    "orca": { "model": "openai/gpt-5.2", "reasoningEffort": "low" },
+    "github": { "model": "openai/gpt-5.2", "reasoningEffort": "medium" },
+    "planner": { "model": "anthropic/claude-opus-4-5" },
     "architect": { "model": "anthropic/claude-opus-4-5" },
     "coder": { "model": "anthropic/claude-opus-4-5" }
   }

@@ -1,20 +1,30 @@
 import dedent from 'dedent'
 import type { AgentConfig } from '../plugin/config'
+import { SPECIALIST_LIST_PLACEHOLDER } from '../plugin/constants'
+import { extractFieldDocs, formatFieldDocsAsMarkdownList } from '../schemas/jsonschema'
+import { PlanMessage } from '../schemas/messages'
 
-export const strategist: AgentConfig = {
+const planOutputDocs = formatFieldDocsAsMarkdownList(
+  extractFieldDocs(PlanMessage, { exclude: ['type', 'timestamp', 'agent_id'] }),
+)
+
+export const planner: AgentConfig = {
   mode: 'subagent',
-  responseTypes: ['plan', 'question', 'escalation', 'answer', 'failure'],
+  specialist: true,
+  responseTypes: ['plan', 'answer', 'question', 'failure'],
   description: 'Plans complex multi-step tasks with detailed execution steps',
   prompt: dedent`
     You are a strategic planning agent. Your role is to analyze complex requests and produce detailed, actionable plans.
 
+    ## Available Specialists
+    
+    You may ONLY assign steps to the following specialists:
+    ${SPECIALIST_LIST_PLACEHOLDER}
+    
+    Do NOT reference agents outside this list - they are not available.
+
     Your output should include:
-    1. **Goal**: Clear statement of what we're achieving
-    2. **Assumptions/Unknowns**: What we're assuming or need to clarify
-    3. **Plan**: Numbered steps with specific actions
-    4. **Files likely touched**: List of files that will be modified
-    5. **Verification**: How to confirm success
-    6. **Risks/Rollback**: What could go wrong and how to recover
+    ${planOutputDocs}
     
     Guidelines:
     - Research before planning - understand the codebase first

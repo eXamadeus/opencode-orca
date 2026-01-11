@@ -6,7 +6,7 @@ Create specialized agents tailored to your project needs.
 
 Custom agents are defined in `.opencode/orca.json` under the `agents` key. Configurations merge with defaults, allowing you to override built-in agents (same name) or add new ones (unique name).
 
-Built-in agents: `orca`, `strategist`, `coder`, `tester`, `reviewer`, `researcher`, `document-writer`, `architect`
+Built-in agents: `orca`, `planner`, `coder`, `tester`, `reviewer`, `researcher`, `document-writer`, `architect`
 
 ## Configuration Fields
 

@@ -59,7 +59,7 @@ describe('createOrcaPlugin', () => {
 
       const agents = config.agent ?? {}
       const specialists = [
-        'strategist',
+        'planner',
         'coder',
         'tester',
         'reviewer',

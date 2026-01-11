@@ -76,7 +76,7 @@ Add @me as assignee to issue #<ISSUE_NUMBER>
 | ------- | ----- |
 | `feature` | `feat`  |
 | `bug`     | `fix`   |
-| `chore`   | `chore` |
+| `enhancement` | `enhancement` |
 | (none)  | `feat`  |
 
 **SLUG** — Convert issue title to kebab-case:

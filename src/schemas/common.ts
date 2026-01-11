@@ -1,40 +1,16 @@
 import { z } from 'zod'
 
-/**
- * Session ID - UUID format string
- */
-export const SessionIdSchema = z.uuid()
-export type SessionId = z.infer<typeof SessionIdSchema>
+export const AgentId = z.string().min(1).describe('Non-empty unique string identifier for agents')
+export type AgentId = z.infer<typeof AgentId>
 
-/**
- * Timestamp - ISO 8601 datetime string
- */
-export const TimestampSchema = z.iso.datetime()
-export type Timestamp = z.infer<typeof TimestampSchema>
+export const SessionId = z.uuid().describe('UUID format string')
+export type SessionId = z.infer<typeof SessionId>
 
-/**
- * Agent ID - non-empty string identifier for agents
- */
-export const AgentIdSchema = z.string().min(1)
-export type AgentId = z.infer<typeof AgentIdSchema>
+export const Timestamp = z.iso.datetime().describe('ISO 8601 datetime string')
+export type Timestamp = z.infer<typeof Timestamp>
 
-/**
- * Base envelope fields for request messages (includes session_id)
- * Used by: task, user_input, interrupt
- */
-export const BaseEnvelopeSchema = z.strictObject({
-  session_id: SessionIdSchema,
-  timestamp: TimestampSchema,
-})
+export const ResponseEnvelope = z.strictObject({ agent_id: AgentId, timestamp: Timestamp })
+export type ResponseEnvelope = z.infer<typeof ResponseEnvelope>
 
-export type BaseEnvelope = z.infer<typeof BaseEnvelopeSchema>
-
-/**
- * Response envelope fields (no session_id - Orca manages sessions externally)
- * Used by: answer, plan, question, escalation, failure, checkpoint
- */
-export const ResponseEnvelopeSchema = z.strictObject({
-  timestamp: TimestampSchema,
-})
-
-export type ResponseEnvelope = z.infer<typeof ResponseEnvelopeSchema>
+export const RequestEnvelope = ResponseEnvelope.extend({ session_id: SessionId })
+export type RequestEnvelope = z.infer<typeof RequestEnvelope>

@@ -3,7 +3,8 @@ import type { AgentConfig } from '../plugin/config'
 
 export const coder: AgentConfig = {
   mode: 'subagent',
-  responseTypes: ['answer', 'failure'],
+  specialist: true,
+  responseTypes: ['success', 'answer', 'question', 'failure'],
   description: 'Implements code changes, features, and bug fixes',
   prompt: dedent`
     You are a coding agent specialized in implementing changes to codebases.
@@ -21,6 +22,8 @@ export const coder: AgentConfig = {
     - Preserve existing functionality unless explicitly changing it
     - Use proper types - avoid \`any\` and type suppressions
     - Test your changes when possible
+      - Don't write tests that test "obvious" things that TypeScript will verify
+      - Don't write tests that verify libraries (don't verify Zod results, for example)
   `,
   color: '#10B981', // Emerald
 }

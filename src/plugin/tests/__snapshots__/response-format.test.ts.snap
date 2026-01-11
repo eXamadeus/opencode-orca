@@ -1,0 +1,297 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`generateResponseFormatInstructions generates correct format instructions for answer response type 1`] = `
+"## Response Format (REQUIRED)
+
+You MUST respond with a valid JSON message envelope.
+
+**Allowed response types:** \`answer\`
+
+### Type Selection Guidance
+
+- **answer**: Use when providing information, completing analysis, or returning results.
+
+### JSON Examples
+
+### answer
+\`\`\`json
+{
+  "type": "answer",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "agent_id": "test-agent",
+  "content": "The implementation uses...",
+  "sources": [
+    {
+      "type": "file",
+      "ref": "src/index.ts",
+      "title": "Main entry",
+      "excerpt": "export function..."
+    }
+  ]
+}
+\`\`\`"
+`;
+
+exports[`generateResponseFormatInstructions generates correct format instructions for success response type 1`] = `
+"## Response Format (REQUIRED)
+
+You MUST respond with a valid JSON message envelope.
+
+**Allowed response types:** \`success\`
+
+### Type Selection Guidance
+
+- **success**: Use when a task has been completed successfully with details of what was done.
+
+### JSON Examples
+
+### success
+\`\`\`json
+{
+  "type": "success",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "agent_id": "test-agent",
+  "summary": "Implemented the user authentication flow",
+  "artifacts": [
+    "src/auth/login.ts",
+    "src/auth/middleware.ts"
+  ],
+  "verification": [
+    "All tests passing",
+    "Lint clean"
+  ],
+  "notes": [
+    "Added bcrypt dependency for password hashing"
+  ]
+}
+\`\`\`"
+`;
+
+exports[`generateResponseFormatInstructions generates correct format instructions for plan response type 1`] = `
+"## Response Format (REQUIRED)
+
+You MUST respond with a valid JSON message envelope.
+
+**Allowed response types:** \`plan\`
+
+### Type Selection Guidance
+
+- **plan**: Use when proposing a multi-step execution plan that requires approval.
+
+### JSON Examples
+
+### plan
+\`\`\`json
+{
+  "type": "plan",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "agent_id": "test-agent",
+  "goal": "Implement feature X with tests",
+  "steps": [
+    {
+      "description": "Create the data model in src/models/..."
+    },
+    {
+      "description": "Add validation logic...",
+      "command": "coder"
+    },
+    {
+      "description": "Write unit tests...",
+      "command": "tester"
+    }
+  ],
+  "assumptions": [
+    "Using existing auth middleware",
+    "PostgreSQL database"
+  ],
+  "files_touched": [
+    "src/models/user.ts",
+    "src/services/auth.ts"
+  ],
+  "verification": [
+    "Run test suite: bun test",
+    "Verify API responds correctly: curl localhost:3000/api/feature"
+  ],
+  "risks": [
+    "Migration may fail on production data - test with staging first",
+    "Rollback: revert migration and redeploy previous version"
+  ]
+}
+\`\`\`"
+`;
+
+exports[`generateResponseFormatInstructions generates correct format instructions for question response type 1`] = `
+"## Response Format (REQUIRED)
+
+You MUST respond with a valid JSON message envelope.
+
+**Allowed response types:** \`question\`
+
+### Type Selection Guidance
+
+- **question**: Use when you need clarification or user input to proceed.
+
+### JSON Examples
+
+### question
+\`\`\`json
+{
+  "type": "question",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "agent_id": "test-agent",
+  "question": "Should the API return paginated results or the full list?",
+  "options": [
+    "Paginated (recommended for large datasets)",
+    "Full list"
+  ],
+  "blocking": true
+}
+\`\`\`"
+`;
+
+exports[`generateResponseFormatInstructions generates correct format instructions for failure response type 1`] = `
+"## Response Format (REQUIRED)
+
+You MUST respond with a valid JSON message envelope.
+
+**Allowed response types:** \`failure\`
+
+### Type Selection Guidance
+
+- **failure**: Use when the task cannot be completed due to an error or blocker.
+
+### JSON Examples
+
+### failure
+\`\`\`json
+{
+  "type": "failure",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "code": "AGENT_ERROR",
+  "message": "Unable to complete the task due to...",
+  "cause": "Missing required configuration..."
+}
+\`\`\`"
+`;
+
+exports[`generateResponseFormatInstructions generates correct format instructions for ALL response types 1`] = `
+"## Response Format (REQUIRED)
+
+You MUST respond with a valid JSON message envelope.
+
+**Allowed response types:** \`answer\`, \`success\`, \`plan\`, \`question\`, \`failure\`
+
+### Type Selection Guidance
+
+- **answer**: Use when providing information, completing analysis, or returning results.
+- **success**: Use when a task has been completed successfully with details of what was done.
+- **plan**: Use when proposing a multi-step execution plan that requires approval.
+- **question**: Use when you need clarification or user input to proceed.
+- **failure**: Use when the task cannot be completed due to an error or blocker.
+
+### JSON Examples
+
+### answer
+\`\`\`json
+{
+  "type": "answer",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "agent_id": "test-agent",
+  "content": "The implementation uses...",
+  "sources": [
+    {
+      "type": "file",
+      "ref": "src/index.ts",
+      "title": "Main entry",
+      "excerpt": "export function..."
+    }
+  ]
+}
+\`\`\`
+
+### success
+\`\`\`json
+{
+  "type": "success",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "agent_id": "test-agent",
+  "summary": "Implemented the user authentication flow",
+  "artifacts": [
+    "src/auth/login.ts",
+    "src/auth/middleware.ts"
+  ],
+  "verification": [
+    "All tests passing",
+    "Lint clean"
+  ],
+  "notes": [
+    "Added bcrypt dependency for password hashing"
+  ]
+}
+\`\`\`
+
+### plan
+\`\`\`json
+{
+  "type": "plan",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "agent_id": "test-agent",
+  "goal": "Implement feature X with tests",
+  "steps": [
+    {
+      "description": "Create the data model in src/models/..."
+    },
+    {
+      "description": "Add validation logic...",
+      "command": "coder"
+    },
+    {
+      "description": "Write unit tests...",
+      "command": "tester"
+    }
+  ],
+  "assumptions": [
+    "Using existing auth middleware",
+    "PostgreSQL database"
+  ],
+  "files_touched": [
+    "src/models/user.ts",
+    "src/services/auth.ts"
+  ],
+  "verification": [
+    "Run test suite: bun test",
+    "Verify API responds correctly: curl localhost:3000/api/feature"
+  ],
+  "risks": [
+    "Migration may fail on production data - test with staging first",
+    "Rollback: revert migration and redeploy previous version"
+  ]
+}
+\`\`\`
+
+### question
+\`\`\`json
+{
+  "type": "question",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "agent_id": "test-agent",
+  "question": "Should the API return paginated results or the full list?",
+  "options": [
+    "Paginated (recommended for large datasets)",
+    "Full list"
+  ],
+  "blocking": true
+}
+\`\`\`
+
+### failure
+\`\`\`json
+{
+  "type": "failure",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "code": "AGENT_ERROR",
+  "message": "Unable to complete the task due to...",
+  "cause": "Missing required configuration..."
+}
+\`\`\`"
+`;

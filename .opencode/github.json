@@ -27,7 +27,10 @@
     "epic": { "name": "epic", "description": "Larger effort with sub-issues" },
     "bug": { "name": "bug", "description": "Something broken" },
     "feature": { "name": "feature", "description": "New functionality" },
-    "chore": { "name": "chore", "description": "Maintenance/cleanup" }
+    "enhancement": {
+      "name": "enhancement",
+      "description": "Any enhancement that is not a full-fledged feature. Includes maintenance, cleanup, or improvements that might not be user facing."
+    }
   },
   "current_epic": {
     "number": 6,
@@ -42,7 +45,7 @@
     "branch_prefix": {
       "feature": "feature/",
       "bugfix": "fix/",
-      "chore": "chore/"
+      "enhancement": "enhancement/"
     }
   }
 }
