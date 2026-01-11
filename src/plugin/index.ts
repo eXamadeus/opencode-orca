@@ -1,7 +1,4 @@
 import { type Plugin, tool } from '@opencode-ai/plugin'
-import type { Event, AgentConfig as OpenCodeAgentConfig } from '@opencode-ai/sdk'
-import dedent from 'dedent'
-import { AgentId } from '../schemas/common'
 import { TaskMessage } from '../schemas/messages'
 import { DEFAULT_AGENTS, mergeAgentConfigs } from './agents'
 import { type AgentConfig, type OrcaSettings, loadUserConfig } from './config'
@@ -15,13 +12,13 @@ export const createOrcaPlugin = (): Plugin => {
     const { client, directory } = input
 
     let userConfig: Awaited<ReturnType<typeof loadUserConfig>>
+    let configLoadError: string | undefined
     try {
       userConfig = await loadUserConfig(directory)
     } catch (error) {
       userConfig = undefined
-      // Log error but don't crash - use defaults only
-      const message = error instanceof Error ? error.message : error
-      console.error(`[opencode-orca] Failed to load user config: ${message}`)
+      configLoadError = error instanceof Error ? error.message : String(error)
+      console.error(`[opencode-orca] Failed to load user config: ${configLoadError}`)
     }
 
     // Merge default agents with user overrides/additions
@@ -32,6 +29,7 @@ export const createOrcaPlugin = (): Plugin => {
 
     // Track plugin entry for update notifier (will be populated in config hook)
     let pluginEntry: string | undefined
+    let hasRunUpdateNotifier = false
 
     return {
       async config(config) {
@@ -49,8 +47,33 @@ export const createOrcaPlugin = (): Plugin => {
       },
 
       async event({ event }) {
-        // Run update notifier on session creation (fire-and-forget)
-        if (event.type === 'session.created') {
+        // Only run once per startup
+        if (hasRunUpdateNotifier) return
+
+        // Skip sub-sessions (background tasks)
+        const props = event.properties as { info?: { parentID?: string } } | undefined
+        if (props?.info?.parentID) return
+
+        hasRunUpdateNotifier = true
+
+        // Show config error toast on first interaction (TUI not ready during init)
+        if (configLoadError) {
+          setTimeout(() => {
+            client.tui
+              .showToast({
+                body: {
+                  title: 'Orca Config Error',
+                  message: configLoadError,
+                  variant: 'error',
+                  duration: 20_000,
+                },
+              })
+              .catch(() => {})
+          }, 0)
+        }
+
+        // Run update notifier on first interaction (uses internal caching for npm checks)
+        setTimeout(() => {
           runUpdateNotifier({
             client,
             currentVersion: getPluginVersion(),
@@ -59,7 +82,7 @@ export const createOrcaPlugin = (): Plugin => {
           }).catch(() => {
             // Silently ignore update notifier errors
           })
-        }
+        }, 0)
       },
 
       tool: {
@@ -78,21 +101,6 @@ export const createOrcaPlugin = (): Plugin => {
             return dispatchToAgent(args, dispatchCtx)
           },
         }),
-      },
-
-      /**
-       * TODO: HITL hooks for observability and future approval gates
-       */
-      'tool.execute.before': async (input, output) => {
-        if (input.tool === 'orca_dispatch') {
-          console.log(`[opencode-orca] Dispatching: session=${input.sessionID}`)
-        }
-      },
-
-      'tool.execute.after': async (input, output) => {
-        if (input.tool === 'orca_dispatch') {
-          console.log(`[opencode-orca] Dispatch complete: session=${input.sessionID}`)
-        }
       },
     }
   }
