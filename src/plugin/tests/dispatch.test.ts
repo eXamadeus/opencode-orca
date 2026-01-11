@@ -1,6 +1,11 @@
 import { describe, expect, mock, test } from 'bun:test'
 import type { OpencodeClient } from '@opencode-ai/sdk'
-import type { PlanContext, TaskMessage } from '../../schemas/messages'
+import type {
+  AnswerMessage,
+  DispatchPayload,
+  PlanContext,
+  TaskMessage,
+} from '../../schemas/messages'
 import {
   type DispatchContext,
   createCheckpointMessage,
@@ -49,19 +54,22 @@ function createMockClient(options: {
   return { session: mockSession } as unknown as OpencodeClient
 }
 
-function createTaskMessage(
+function createTaskDispatch(
   overrides?: Partial<Omit<TaskMessage, 'type' | 'session_id' | 'timestamp'>> & {
     plan_context?: PlanContext
+    agent_id?: string
   },
-): TaskMessage {
+) {
+  const { agent_id = 'coder', ...rest } = overrides ?? {}
+
   return {
-    type: 'task',
-    session_id: '550e8400-e29b-41d4-a716-446655440000',
-    timestamp: '2024-01-01T00:00:00.000Z',
-    agent_id: 'coder',
-    prompt: 'Write a function',
-    ...overrides,
-  }
+    agent_id,
+    message: {
+      type: 'task',
+      prompt: 'Write a function',
+      ...rest,
+    } satisfies TaskMessage,
+  } satisfies DispatchPayload
 }
 
 describe('dispatchToAgent', () => {
@@ -77,11 +85,16 @@ describe('dispatchToAgent', () => {
       validationConfig: DEFAULT_VALIDATION_CONFIG,
     }
 
-    const result = await dispatchToAgent('not valid json' as unknown as TaskMessage, ctx)
+    const result = await dispatchToAgent(
+      { agent_id: 'coder', message: 'not valid json' as unknown as TaskMessage },
+      ctx,
+    )
     const parsed = JSON.parse(result)
 
-    expect(parsed.type).toBe('failure')
-    expect(parsed.code).toBe('VALIDATION_ERROR')
+    // Early failure - no session_id
+    expect(parsed.session_id).toBeUndefined()
+    expect(parsed.message.type).toBe('failure')
+    expect(parsed.message.code).toBe('VALIDATION_ERROR')
   })
 
   test('returns failure when session creation fails', async () => {
@@ -91,11 +104,13 @@ describe('dispatchToAgent', () => {
       validationConfig: DEFAULT_VALIDATION_CONFIG,
     }
 
-    const result = await dispatchToAgent(createTaskMessage(), ctx)
+    const result = await dispatchToAgent(createTaskDispatch(), ctx)
     const parsed = JSON.parse(result)
 
-    expect(parsed.type).toBe('failure')
-    expect(parsed.code).toBe('SESSION_NOT_FOUND')
+    // Session creation failed - no session_id
+    expect(parsed.session_id).toBeUndefined()
+    expect(parsed.message.type).toBe('failure')
+    expect(parsed.message.code).toBe('SESSION_NOT_FOUND')
   })
 
   test('returns failure when agent returns empty response', async () => {
@@ -112,12 +127,14 @@ describe('dispatchToAgent', () => {
       validationConfig: DEFAULT_VALIDATION_CONFIG,
     }
 
-    const result = await dispatchToAgent(createTaskMessage(), ctx)
+    const result = await dispatchToAgent(createTaskDispatch(), ctx)
     const parsed = JSON.parse(result)
 
-    expect(parsed.type).toBe('failure')
-    expect(parsed.code).toBe('AGENT_ERROR')
-    expect(parsed.message).toContain('empty response')
+    // Error after session creation - has session_id
+    expect(parsed.session_id).toBe('test-session')
+    expect(parsed.message.type).toBe('failure')
+    expect(parsed.message.code).toBe('AGENT_ERROR')
+    expect(parsed.message.message).toContain('empty response')
   })
 
   test('wraps plain text response as answer message', async () => {
@@ -127,21 +144,22 @@ describe('dispatchToAgent', () => {
       validationConfig: { maxRetries: 2, wrapPlainText: true },
     }
 
-    const result = await dispatchToAgent(createTaskMessage(), ctx)
-    const parsed = JSON.parse(result)
+    const result = JSON.parse(await dispatchToAgent(createTaskDispatch(), ctx))
 
-    expect(parsed.type).toBe('answer')
-    expect(parsed.content).toBe('Here is my plain text response')
-    expect(parsed.agent_id).toBe('coder')
+    expect(result.session_id).toBe('test-session-id')
+    expect(result.message).toMatchInlineSnapshot(`
+      {
+        "content": "Here is my plain text response",
+        "type": "answer",
+      }
+    `)
   })
 
   test('returns valid JSON response from agent', async () => {
     const validResponse = JSON.stringify({
       type: 'answer',
-      timestamp: '2024-01-01T00:00:00.000Z',
-      agent_id: 'coder',
       content: 'Task completed',
-    })
+    } satisfies AnswerMessage)
 
     const ctx: DispatchContext = {
       client: createMockClient({ promptResponse: validResponse }),
@@ -149,11 +167,15 @@ describe('dispatchToAgent', () => {
       validationConfig: { maxRetries: 2, wrapPlainText: false },
     }
 
-    const result = await dispatchToAgent(createTaskMessage(), ctx)
-    const parsed = JSON.parse(result)
+    const result = JSON.parse(await dispatchToAgent(createTaskDispatch(), ctx))
 
-    expect(parsed.type).toBe('answer')
-    expect(parsed.content).toBe('Task completed')
+    expect(result.session_id).toBe('test-session-id')
+    expect(result.message).toMatchInlineSnapshot(`
+      {
+        "content": "Task completed",
+        "type": "answer",
+      }
+    `)
   })
 
   test('returns failure when agent throws error', async () => {
@@ -163,12 +185,13 @@ describe('dispatchToAgent', () => {
       validationConfig: DEFAULT_VALIDATION_CONFIG,
     }
 
-    const result = await dispatchToAgent(createTaskMessage(), ctx)
+    const result = await dispatchToAgent(createTaskDispatch(), ctx)
     const parsed = JSON.parse(result)
 
-    expect(parsed.type).toBe('failure')
-    expect(parsed.code).toBe('AGENT_ERROR')
-    expect(parsed.cause).toContain('Agent crashed')
+    // Error during dispatch - no session_id (error thrown before we can track it)
+    expect(parsed.message.type).toBe('failure')
+    expect(parsed.message.code).toBe('AGENT_ERROR')
+    expect(parsed.message.cause).toContain('Agent crashed')
   })
 
   test('returns timeout failure when abort signal is triggered', async () => {
@@ -191,58 +214,12 @@ describe('dispatchToAgent', () => {
       abort: abortController.signal,
     }
 
-    const result = await dispatchToAgent(createTaskMessage(), ctx)
+    const result = await dispatchToAgent(createTaskDispatch(), ctx)
     const parsed = JSON.parse(result)
 
-    expect(parsed.type).toBe('failure')
-    expect(parsed.code).toBe('TIMEOUT')
-  })
-
-  test('uses parent_session_id when provided', async () => {
-    const promptMock = mock(async () => ({
-      data: {
-        parts: [
-          {
-            id: 'p1',
-            sessionID: 's1',
-            messageID: 'm1',
-            type: 'text' as const,
-            text: 'Response',
-          },
-        ],
-      },
-    }))
-
-    const createMock = mock(async () => ({ data: { id: 'new-session' } }))
-
-    const mockClient = {
-      session: {
-        create: createMock,
-        prompt: promptMock,
-      },
-    } as unknown as OpencodeClient
-
-    const ctx: DispatchContext = {
-      client: mockClient,
-      agents: testAgents,
-      validationConfig: { maxRetries: 2, wrapPlainText: true },
-    }
-
-    const taskWithParent = createTaskMessage({
-      parent_session_id: '550e8400-e29b-41d4-a716-446655440000', // Must be valid UUID
-    })
-
-    const result = await dispatchToAgent(taskWithParent, ctx)
-    const parsed = JSON.parse(result)
-
-    // Should succeed with wrapped plain text response
-    expect(parsed.type).toBe('answer')
-
-    // Should not create a new session when parent_session_id is provided
-    expect(createMock).not.toHaveBeenCalled()
-
-    // Should call prompt with the parent session ID
-    expect(promptMock).toHaveBeenCalled()
+    // Timeout - no session_id in error response
+    expect(parsed.message.type).toBe('failure')
+    expect(parsed.message.code).toBe('TIMEOUT')
   })
 })
 
@@ -284,27 +261,27 @@ describe('isAgentSupervised', () => {
 
 describe('createCheckpointMessage', () => {
   test('creates checkpoint from task message', () => {
-    const task = createTaskMessage()
-    const checkpoint = createCheckpointMessage(task)
+    const task = createTaskDispatch()
+    const checkpoint = createCheckpointMessage(task.message)
 
     expect(checkpoint.type).toBe('checkpoint')
     // Checkpoint is a response message, so no session_id
     expect((checkpoint as Record<string, unknown>).session_id).toBeUndefined()
-    expect(checkpoint.agent_id).toBe('coder')
+    expect(task.agent_id).toBe('coder')
     expect(checkpoint.prompt).toBe('Write a function')
     expect(checkpoint.step_index).toBeUndefined()
     expect(checkpoint.plan_goal).toBeUndefined()
   })
 
   test('includes plan context fields when present', () => {
-    const task = createTaskMessage({
+    const task = createTaskDispatch({
       plan_context: {
         goal: 'Build feature X',
         step_index: 2,
         approved_remaining: false,
       },
     })
-    const checkpoint = createCheckpointMessage(task)
+    const checkpoint = createCheckpointMessage(task.message)
 
     expect(checkpoint.step_index).toBe(2)
     expect(checkpoint.plan_goal).toBe('Build feature X')
@@ -324,12 +301,13 @@ describe('dispatchToAgent with supervision', () => {
       validationConfig: DEFAULT_VALIDATION_CONFIG,
     }
 
-    const result = await dispatchToAgent(createTaskMessage({ agent_id: 'coder' }), ctx)
+    const result = await dispatchToAgent(createTaskDispatch({ agent_id: 'coder' }), ctx)
     const parsed = JSON.parse(result)
 
-    expect(parsed.type).toBe('checkpoint')
-    expect(parsed.agent_id).toBe('coder')
-    expect(parsed.prompt).toBe('Write a function')
+    // Checkpoint has session_id for resumption after approval
+    expect(parsed.session_id).toBe('test-session-id')
+    expect(parsed.message.type).toBe('checkpoint')
+    expect(parsed.message.prompt).toBe('Write a function')
   })
 
   test('proceeds with dispatch when approved_remaining is true', async () => {
@@ -340,8 +318,7 @@ describe('dispatchToAgent with supervision', () => {
     }
 
     const result = await dispatchToAgent(
-      createTaskMessage({
-        agent_id: 'coder',
+      createTaskDispatch({
         plan_context: { goal: 'Test', step_index: 0, approved_remaining: true },
       }),
       ctx,
@@ -349,8 +326,9 @@ describe('dispatchToAgent with supervision', () => {
     const parsed = JSON.parse(result)
 
     // Should proceed to dispatch and return answer, not checkpoint
-    expect(parsed.type).toBe('answer')
-    expect(parsed.content).toBe('Done')
+    expect(parsed.session_id).toBe('test-session-id')
+    expect(parsed.message.type).toBe('answer')
+    expect(parsed.message.content).toBe('Done')
   })
 
   test('proceeds with dispatch for non-supervised agent', async () => {
@@ -360,11 +338,12 @@ describe('dispatchToAgent with supervision', () => {
       validationConfig: { maxRetries: 2, wrapPlainText: true },
     }
 
-    const result = await dispatchToAgent(createTaskMessage({ agent_id: 'researcher' }), ctx)
+    const result = await dispatchToAgent(createTaskDispatch({ agent_id: 'researcher' }), ctx)
     const parsed = JSON.parse(result)
 
-    expect(parsed.type).toBe('answer')
-    expect(parsed.content).toBe('Research complete')
+    expect(parsed.session_id).toBe('test-session-id')
+    expect(parsed.message.type).toBe('answer')
+    expect(parsed.message.content).toBe('Research complete')
   })
 
   test('uses defaultSupervised from settings', async () => {
@@ -375,9 +354,10 @@ describe('dispatchToAgent with supervision', () => {
       settings: { defaultSupervised: true },
     }
 
-    const result = await dispatchToAgent(createTaskMessage({ agent_id: 'coder' }), ctx)
+    const result = await dispatchToAgent(createTaskDispatch({ agent_id: 'coder' }), ctx)
     const parsed = JSON.parse(result)
 
-    expect(parsed.type).toBe('checkpoint')
+    expect(parsed.session_id).toBe('test-session-id')
+    expect(parsed.message.type).toBe('checkpoint')
   })
 })

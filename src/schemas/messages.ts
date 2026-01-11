@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import { ResponseType } from '../plugin/config'
-import { RequestEnvelope, ResponseEnvelope, SessionId, Timestamp } from './common'
+import { AgentId, SessionId } from './common'
 import { ErrorCode } from './errors'
 
 export const PlanContext = z
@@ -34,7 +33,7 @@ export const Annotation = z.strictObject({
 })
 export type Annotation = z.infer<typeof Annotation>
 
-export const TaskMessage = RequestEnvelope.extend({
+export const TaskMessage = z.strictObject({
   type: z.literal('task'),
   prompt: z.string().min(1),
   context: z.record(z.string(), z.unknown()).optional(),
@@ -43,7 +42,7 @@ export const TaskMessage = RequestEnvelope.extend({
 })
 export type TaskMessage = z.infer<typeof TaskMessage>
 
-export const PlanMessage = ResponseEnvelope.extend({
+export const PlanMessage = z.strictObject({
   type: z.literal('plan'),
   goal: z.string().min(1).describe('Clear statement of what we are achieving'),
   steps: z.array(PlanStep).min(1).describe('Numbered steps with specific actions'),
@@ -57,7 +56,7 @@ export const PlanMessage = ResponseEnvelope.extend({
 })
 export type PlanMessage = z.infer<typeof PlanMessage>
 
-export const AnswerMessage = ResponseEnvelope.extend({
+export const AnswerMessage = z.strictObject({
   type: z.literal('answer'),
   content: z.string(),
   sources: z.array(Source).optional(),
@@ -65,7 +64,7 @@ export const AnswerMessage = ResponseEnvelope.extend({
 })
 export type AnswerMessage = z.infer<typeof AnswerMessage>
 
-export const QuestionMessage = ResponseEnvelope.extend({
+export const QuestionMessage = z.strictObject({
   type: z.literal('question'),
   question: z.string().min(1),
   options: z.array(z.string()).optional(),
@@ -73,13 +72,13 @@ export const QuestionMessage = ResponseEnvelope.extend({
 })
 export type QuestionMessage = z.infer<typeof QuestionMessage>
 
-export const InterruptMessage = RequestEnvelope.extend({
+export const InterruptMessage = z.strictObject({
   type: z.literal('interrupt'),
   reason: z.string().min(1),
 })
 export type InterruptMessage = z.infer<typeof InterruptMessage>
 
-export const FailureMessage = ResponseEnvelope.omit({ agent_id: true }).extend({
+export const FailureMessage = z.strictObject({
   type: z.literal('failure'),
   code: ErrorCode,
   message: z.string().min(1),
@@ -87,7 +86,7 @@ export const FailureMessage = ResponseEnvelope.omit({ agent_id: true }).extend({
 })
 export type FailureMessage = z.infer<typeof FailureMessage>
 
-export const CheckpointMessage = ResponseEnvelope.extend({
+export const CheckpointMessage = z.strictObject({
   type: z.literal('checkpoint'),
   prompt: z.string().min(1),
   step_index: z.number().int().nonnegative().optional(),
@@ -95,7 +94,7 @@ export const CheckpointMessage = ResponseEnvelope.extend({
 })
 export type CheckpointMessage = z.infer<typeof CheckpointMessage>
 
-export const SuccessMessage = ResponseEnvelope.extend({
+export const SuccessMessage = z.strictObject({
   type: z.literal('success'),
   summary: z.string().min(1).describe('Brief description of what was completed'),
   artifacts: z.array(z.string()).optional().describe('Files created or modified'),
@@ -104,7 +103,7 @@ export const SuccessMessage = ResponseEnvelope.extend({
 })
 export type SuccessMessage = z.infer<typeof SuccessMessage>
 
-export const MessageEnvelope = z.discriminatedUnion('type', [
+const messages = [
   QuestionMessage,
   AnswerMessage,
   SuccessMessage,
@@ -113,7 +112,29 @@ export const MessageEnvelope = z.discriminatedUnion('type', [
   CheckpointMessage,
   FailureMessage,
   InterruptMessage,
-])
+] as const
 
-export type MessageEnvelope = z.infer<typeof MessageEnvelope>
-export type MessageType = MessageEnvelope['type']
+export const messageTypes = messages.map((m) => m.shape.type.value)
+
+export const Message = z.discriminatedUnion('type', messages)
+export type Message = z.infer<typeof Message>
+
+export const MessageType = z.enum(messages.map((m) => m.shape.type.value))
+export type MessageType = z.infer<typeof MessageType>
+
+export const DispatchPayload = z.strictObject({
+  agent_id: AgentId,
+  session_id: SessionId.optional().describe(
+    'Optional OpenCode session_id for resuming communication with a previous session.',
+  ),
+  message: Message,
+})
+export type DispatchPayload = z.infer<typeof DispatchPayload>
+
+export const DispatchResponse = z.strictObject({
+  session_id: SessionId.optional().describe(
+    'Session ID for continuing the conversation. Absent on early failures (unknown agent, validation error).',
+  ),
+  message: Message,
+})
+export type DispatchResponse = z.infer<typeof DispatchResponse>

@@ -1,5 +1,11 @@
 import type { OpencodeClient, Part } from '@opencode-ai/sdk'
-import { type CheckpointMessage, TaskMessage } from '../schemas/messages'
+import {
+  type CheckpointMessage,
+  DispatchPayload,
+  type DispatchResponse,
+  type Message,
+  type TaskMessage,
+} from '../schemas/messages'
 import type { AgentConfig, OrcaSettings } from './config'
 import type { ValidationConfig } from './types'
 import { createFailureMessage, validateWithRetry } from './validation'
@@ -46,9 +52,7 @@ export function isAgentSupervised(
  */
 export function createCheckpointMessage(task: TaskMessage): CheckpointMessage {
   return {
-    timestamp: new Date().toISOString(),
     type: 'checkpoint',
-    agent_id: task.agent_id,
     prompt: task.prompt,
     step_index: task.plan_context?.step_index,
     plan_goal: task.plan_context?.goal,
@@ -67,79 +71,90 @@ function extractTextFromParts(parts: Part[]): string {
 }
 
 /**
- * Dispatch a task message to a specialist agent
+ * Helper to create a DispatchResponse envelope
+ */
+function createResponse(message: Message, sessionId?: string): DispatchResponse {
+  return sessionId ? { session_id: sessionId, message } : { message }
+}
+
+/**
+ * Dispatch a message to a specialist agent
  *
- * @param unsafeTask - possible TaskMessage
+ * @param payload - Dispatch payload with agent_id, optional session_id, and message
  * @param ctx - Dispatch context with client, agents, and config
- * @returns JSON string of response MessageEnvelope
+ * @returns JSON string of DispatchResponse
  */
 export async function dispatchToAgent(
-  unsafeTask: TaskMessage,
+  payload: DispatchPayload,
   ctx: DispatchContext,
 ): Promise<string> {
-  const task = TaskMessage.safeParse(unsafeTask)
-  if (!task.success) {
+  // Validate payload structure (early failure - no session)
+  const parsed = DispatchPayload.safeParse(payload)
+  if (!parsed.success) {
     return JSON.stringify(
-      createFailureMessage(
-        'VALIDATION_ERROR',
-        'Invalid task message format',
-        'Message must be a valid TaskMessage JSON envelope',
+      createResponse(
+        createFailureMessage({
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid message format',
+          cause: parsed.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
+        }),
       ),
     )
   }
 
-  const { agent_id: targetAgentId, prompt, parent_session_id, plan_context } = task.data
+  const { agent_id: agentId, session_id: sessionId, message } = parsed.data
 
-  // Verify target agent exists
-  if (!ctx.agents[targetAgentId]) {
+  // Verify target agent exists (early failure - no session)
+  if (!ctx.agents[agentId]) {
     return JSON.stringify(
-      createFailureMessage(
-        'UNKNOWN_AGENT',
-        `Unknown agent: ${targetAgentId}`,
-        `Available agents: ${Object.keys(ctx.agents).join(', ')}`,
+      createResponse(
+        createFailureMessage({
+          code: 'UNKNOWN_AGENT',
+          message: `Unknown agent: ${agentId}`,
+          cause: `Available agents: ${Object.keys(ctx.agents).join(', ')}`,
+        }),
       ),
     )
-  }
-
-  // Check if agent requires supervision
-  const supervised = isAgentSupervised(targetAgentId, ctx.agents, ctx.settings)
-  const approvedRemaining = plan_context?.approved_remaining ?? false
-
-  // Return checkpoint if supervised and not pre-approved
-  if (supervised && !approvedRemaining) {
-    return JSON.stringify(createCheckpointMessage(task.data))
   }
 
   try {
-    // Create or use existing session
-    let sessionId: string
+    // Create or reuse session BEFORE supervision check
+    let currentSession = sessionId
 
-    if (parent_session_id) {
-      // Use existing parent session
-      sessionId = parent_session_id
-    } else {
-      // Create new session
+    if (!currentSession) {
       const createResult = await ctx.client.session.create({})
 
       if (!createResult.data?.id) {
         return JSON.stringify(
-          createFailureMessage(
-            'SESSION_NOT_FOUND',
-            'Failed to create session',
-            'Session creation returned no ID',
+          createResponse(
+            createFailureMessage({
+              code: 'SESSION_NOT_FOUND',
+              message: 'Failed to create session',
+              cause: 'Session creation returned no ID',
+            }),
           ),
         )
       }
 
-      sessionId = createResult.data.id
+      currentSession = createResult.data.id
+    }
+
+    // Check supervision for task messages (now has session context)
+    if (message.type === 'task') {
+      const supervised = isAgentSupervised(agentId, ctx.agents, ctx.settings)
+      const approvedRemaining = message.plan_context?.approved_remaining ?? false
+
+      if (supervised && !approvedRemaining) {
+        return JSON.stringify(createResponse(createCheckpointMessage(message), currentSession))
+      }
     }
 
     // Send prompt to agent
     const promptResult = await ctx.client.session.prompt({
-      path: { id: sessionId },
+      path: { id: currentSession },
       body: {
-        agent: targetAgentId,
-        parts: [{ type: 'text', text: prompt }],
+        agent: agentId,
+        parts: [{ type: 'text', text: JSON.stringify(message, null, 2) }],
       },
     })
 
@@ -149,10 +164,13 @@ export async function dispatchToAgent(
 
     if (!responseText) {
       return JSON.stringify(
-        createFailureMessage(
-          'AGENT_ERROR',
-          'Agent returned empty response',
-          `Agent ${targetAgentId} produced no text output`,
+        createResponse(
+          createFailureMessage({
+            code: 'AGENT_ERROR',
+            message: 'Agent returned empty response',
+            cause: `Agent ${agentId} produced no text output`,
+          }),
+          currentSession,
         ),
       )
     }
@@ -160,14 +178,13 @@ export async function dispatchToAgent(
     // Validate response with retry logic
     const validatedMessage = await validateWithRetry(
       responseText,
-      targetAgentId,
       ctx.validationConfig,
       // Retry sender: re-prompt the agent with correction
       async (correctionPrompt) => {
         const retryResult = await ctx.client.session.prompt({
-          path: { id: sessionId },
+          path: { id: currentSession },
           body: {
-            agent: targetAgentId,
+            agent: agentId,
             parts: [{ type: 'text', text: correctionPrompt }],
           },
         })
@@ -177,19 +194,28 @@ export async function dispatchToAgent(
       },
     )
 
-    return JSON.stringify(validatedMessage)
+    return JSON.stringify(createResponse(validatedMessage, currentSession))
   } catch (err) {
     // Check for abort/timeout
     if (ctx.abort?.aborted) {
-      return JSON.stringify(createFailureMessage('TIMEOUT', 'Request timed out or was cancelled'))
+      return JSON.stringify(
+        createResponse(
+          createFailureMessage({
+            code: 'TIMEOUT',
+            message: 'Request timed out or was cancelled',
+          }),
+        ),
+      )
     }
 
     // Generic agent error
     return JSON.stringify(
-      createFailureMessage(
-        'AGENT_ERROR',
-        'Agent execution failed',
-        err instanceof Error ? err.message : String(err),
+      createResponse(
+        createFailureMessage({
+          code: 'AGENT_ERROR',
+          message: 'Agent execution failed',
+          cause: err instanceof Error ? err.message : String(err),
+        }),
       ),
     )
   }

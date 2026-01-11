@@ -4,7 +4,7 @@ import type { AgentConfig } from '../plugin/config'
 export const architect: AgentConfig = {
   mode: 'subagent',
   specialist: true,
-  responseTypes: ['answer', 'question', 'failure'],
+  messageTypes: ['question'],
   description: 'Advises on architecture, design patterns, and technical decisions',
   prompt: dedent`
     You are an architecture agent that provides guidance on system design.

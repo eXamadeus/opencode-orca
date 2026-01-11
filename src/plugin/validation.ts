@@ -1,17 +1,13 @@
 import type { ZodError } from 'zod'
 import type { AgentId } from '../schemas/common'
 import type { ErrorCode } from '../schemas/errors'
-import { type AnswerMessage, type FailureMessage, MessageEnvelope } from '../schemas/messages'
+import { type AnswerMessage, type FailureMessage, Message } from '../schemas/messages'
 import type { ValidationConfig } from './types'
 import { DEFAULT_VALIDATION_CONFIG } from './types'
 
 export type ValidationResult =
-  | { success: true; message: MessageEnvelope }
+  | { success: true; message: Message }
   | { success: false; error: string; retryable: boolean }
-
-function nowTimestamp(): string {
-  return new Date().toISOString()
-}
 
 export function formatZodErrors(error: ZodError): string {
   const issues = error.issues
@@ -24,23 +20,24 @@ export function formatZodErrors(error: ZodError): string {
   return `Message validation failed:\n${issues}\n\nPlease correct the message format and try again.`
 }
 
-export function wrapAsAnswerMessage(content: string, agentId: string): AnswerMessage {
+export function wrapAsAnswerMessage(content: string): AnswerMessage {
   return {
     type: 'answer',
-    timestamp: nowTimestamp(),
-    agent_id: agentId,
     content,
   }
 }
 
-export function createFailureMessage(
-  code: ErrorCode,
-  message: string,
-  cause?: string,
-): FailureMessage {
+export function createFailureMessage({
+  code,
+  message,
+  cause,
+}: {
+  code: ErrorCode
+  message: string
+  cause?: string
+}): FailureMessage {
   return {
     type: 'failure',
-    timestamp: nowTimestamp(),
     code,
     message,
     cause,
@@ -59,7 +56,7 @@ export function validateMessage(raw: string): ValidationResult {
     }
   }
 
-  const result = MessageEnvelope.safeParse(parsed)
+  const result = Message.safeParse(parsed)
   if (result.success) {
     return { success: true, message: result.data }
   }
@@ -77,28 +74,32 @@ function isPlainText(raw: string): boolean {
   return !trimmed.startsWith('{') && !trimmed.startsWith('[')
 }
 
+function stripMarkdownCodeFence(raw: string): string {
+  const trimmed = raw.trim()
+  const match = trimmed.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/i)
+  return match ? match[1].trim() : trimmed
+}
+
 /**
  * Validate a response with retry logic and optional plain text wrapping
  *
  * @param raw - Raw response string from agent
- * @param agentId - ID of the agent that produced the response
  * @param config - Validation configuration
  * @param retrySender - Optional callback to request a corrected response
- * @returns Validated MessageEnvelope or FailureMessage after retries exhausted
+ * @returns Validated DispatchMessage or FailureMessage after retries exhausted
  */
 export async function validateWithRetry(
   raw: string,
-  agentId: string,
   config: ValidationConfig = DEFAULT_VALIDATION_CONFIG,
   retrySender?: (correctionPrompt: string) => Promise<string>,
-): Promise<MessageEnvelope> {
-  let currentRaw = raw
+): Promise<Message> {
+  let currentRaw = stripMarkdownCodeFence(raw)
   let attempts = 0
 
   while (attempts <= config.maxRetries) {
     // Check for plain text wrapping
     if (config.wrapPlainText && isPlainText(currentRaw)) {
-      return wrapAsAnswerMessage(currentRaw, agentId)
+      return wrapAsAnswerMessage(currentRaw)
     }
 
     const result = validateMessage(currentRaw)
@@ -109,22 +110,22 @@ export async function validateWithRetry(
 
     // Can't retry without a sender, or exhausted retries
     if (!retrySender || attempts >= config.maxRetries) {
-      return createFailureMessage(
-        'VALIDATION_ERROR',
-        `Message validation failed after ${attempts + 1} attempt(s)`,
-        result.error,
-      )
+      return createFailureMessage({
+        code: 'VALIDATION_ERROR',
+        message: `Message validation failed after ${attempts + 1} attempt(s)`,
+        cause: result.error,
+      })
     }
 
     // Request correction
     attempts++
-    currentRaw = await retrySender(result.error)
+    currentRaw = stripMarkdownCodeFence(await retrySender(result.error))
   }
 
   // Should not reach here, but safety fallback
-  return createFailureMessage(
-    'VALIDATION_ERROR',
-    'Message validation failed',
-    'Exceeded maximum retry attempts',
-  )
+  return createFailureMessage({
+    code: 'VALIDATION_ERROR',
+    message: 'Message validation failed',
+    cause: 'Exceeded maximum retry attempts',
+  })
 }

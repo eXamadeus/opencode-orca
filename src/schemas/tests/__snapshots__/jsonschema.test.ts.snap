@@ -1,0 +1,51 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`extractFieldDocs extracts field names and descriptions from PlanMessage 1`] = `
+[
+  {
+    "description": "Clear statement of what we are achieving",
+    "label": "Goal",
+    "name": "goal",
+    "optional": false,
+  },
+  {
+    "description": "Numbered steps with specific actions",
+    "label": "Steps",
+    "name": "steps",
+    "optional": false,
+  },
+  {
+    "description": "What we are assuming or need to clarify",
+    "label": "Assumptions",
+    "name": "assumptions",
+    "optional": false,
+  },
+  {
+    "description": "List of files that will be modified",
+    "label": "Files Touched",
+    "name": "files_touched",
+    "optional": false,
+  },
+  {
+    "description": "How to confirm success - commands, tests, or checks to run",
+    "label": "Verification",
+    "name": "verification",
+    "optional": false,
+  },
+  {
+    "description": "What could go wrong and how to recover/rollback",
+    "label": "Risks",
+    "name": "risks",
+    "optional": false,
+  },
+]
+`;
+
+exports[`formatFieldDocsAsMarkdownList generates numbered markdown list 1`] = `
+"1. **Goal**: Clear statement of what we are achieving
+2. **Steps**: Numbered steps with specific actions
+3. **Assumptions**: What we are assuming or need to clarify
+4. **Files Touched**: List of files that will be modified
+5. **Verification**: How to confirm success - commands, tests, or checks to run
+6. **Risks**: What could go wrong and how to recover/rollback"
+`;

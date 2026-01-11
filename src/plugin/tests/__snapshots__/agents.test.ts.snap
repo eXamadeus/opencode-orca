@@ -1,0 +1,41 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`DEFAULT_AGENTS messageTypes coder has correct messageTypes 1`] = `
+[
+  "task",
+]
+`;
+
+exports[`DEFAULT_AGENTS messageTypes tester has correct messageTypes 1`] = `
+[
+  "task",
+  "question",
+]
+`;
+
+exports[`DEFAULT_AGENTS messageTypes document-writer has correct messageTypes 1`] = `
+[
+  "task",
+]
+`;
+
+exports[`DEFAULT_AGENTS messageTypes architect has correct messageTypes 1`] = `
+[
+  "task",
+  "question",
+]
+`;
+
+exports[`DEFAULT_AGENTS messageTypes researcher has correct messageTypes 1`] = `
+[
+  "task",
+  "question",
+]
+`;
+
+exports[`DEFAULT_AGENTS messageTypes reviewer has correct messageTypes 1`] = `
+[
+  "task",
+  "question",
+]
+`;

@@ -10,8 +10,7 @@ const planOutputDocs = formatFieldDocsAsMarkdownList(
 
 export const planner: AgentConfig = {
   mode: 'subagent',
-  specialist: true,
-  responseTypes: ['plan', 'answer', 'question', 'failure'],
+  messageTypes: ['question'],
   description: 'Plans complex multi-step tasks with detailed execution steps',
   prompt: dedent`
     You are a strategic planning agent. Your role is to analyze complex requests and produce detailed, actionable plans.
