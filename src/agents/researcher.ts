@@ -4,7 +4,7 @@ import type { AgentConfig } from '../plugin/config'
 export const researcher: AgentConfig = {
   mode: 'subagent',
   specialist: true,
-  responseTypes: ['answer', 'question', 'failure'],
+  messageTypes: ['question'],
   description: 'Researches codebases, APIs, and documentation to answer questions',
   prompt: dedent`
     You are a research agent that investigates and explains technical topics.

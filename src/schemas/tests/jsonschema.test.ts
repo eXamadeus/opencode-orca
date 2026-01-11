@@ -5,21 +5,10 @@ import { PlanMessage } from '../messages'
 
 describe('extractFieldDocs', () => {
   test('extracts field names and descriptions from PlanMessage', () => {
-    const docs = extractFieldDocs(PlanMessage, { exclude: ['type', 'timestamp', 'agent_id'] })
+    const docs = extractFieldDocs(PlanMessage, { exclude: ['type'] })
 
     expect(docs).toHaveLength(6)
-    expect(docs[0]).toEqual({
-      name: 'goal',
-      label: 'Goal',
-      description: 'Clear statement of what we are achieving',
-      optional: false,
-    })
-    expect(docs.find((d) => d.name === 'verification')).toEqual({
-      name: 'verification',
-      label: 'Verification',
-      description: 'How to confirm success - commands, tests, or checks to run',
-      optional: false,
-    })
+    expect(docs).toMatchSnapshot()
   })
 
   test('excludes specified fields', () => {
@@ -49,9 +38,22 @@ describe('extractFieldDocs', () => {
 
     const docs = extractFieldDocs(TestSchema)
 
-    expect(docs.find((d) => d.name === 'required_field')?.optional).toBe(false)
-    expect(docs.find((d) => d.name === 'optional_field')?.optional).toBe(true)
-    expect(docs.find((d) => d.name === 'optional_field')?.description).toBe('Optional')
+    expect(docs).toMatchInlineSnapshot(`
+      [
+        {
+          "description": "Required",
+          "label": "Required Field",
+          "name": "required_field",
+          "optional": false,
+        },
+        {
+          "description": "Optional",
+          "label": "Optional Field",
+          "name": "optional_field",
+          "optional": true,
+        },
+      ]
+    `)
   })
 
   test('provides fallback description for fields without .describe()', () => {
@@ -62,22 +64,21 @@ describe('extractFieldDocs', () => {
     const docs = extractFieldDocs(TestSchema)
     const formatted = formatFieldDocsAsMarkdownList(docs)
 
-    expect(formatted).toContain('**No Description**: The no description')
+    expect(docs[0].label).toEqual('No Description')
+    expect(formatted).toMatchInlineSnapshot(`"1. **No Description**: The no description"`)
   })
 })
 
 describe('formatFieldDocsAsMarkdownList', () => {
   test('generates numbered markdown list', () => {
-    const docs = extractFieldDocs(PlanMessage, { exclude: ['type', 'timestamp', 'agent_id'] })
+    const docs = extractFieldDocs(PlanMessage, { exclude: ['type', 'agent_id'] })
     const formatted = formatFieldDocsAsMarkdownList(docs)
 
-    expect(formatted).toContain('1. **Goal**:')
-    expect(formatted).toContain('2. **Steps**:')
-    expect(formatted).toContain('6. **Risks**:')
+    expect(formatted).toMatchSnapshot()
   })
 
   test('includes descriptions in output', () => {
-    const docs = extractFieldDocs(PlanMessage, { exclude: ['type', 'timestamp', 'agent_id'] })
+    const docs = extractFieldDocs(PlanMessage, { exclude: ['type', 'agent_id'] })
     const formatted = formatFieldDocsAsMarkdownList(docs)
 
     expect(formatted).toContain('Clear statement of what we are achieving')

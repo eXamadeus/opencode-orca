@@ -6,28 +6,63 @@ import { planner } from '../agents/planner'
 import { researcher } from '../agents/researcher'
 import { reviewer } from '../agents/reviewer'
 import { tester } from '../agents/tester'
-import type { AgentConfig, ResponseType } from './config'
+import { AgentConfig } from './config'
 import { PROTECTED_AGENTS, SPECIALIST_LIST_PLACEHOLDER } from './constants'
 import { generateResponseFormatInstructions } from './response-format'
-import { DEFAULT_RESPONSE_TYPES } from './types'
 
-// Re-export constants for backward compatibility
-export { PROTECTED_AGENTS, SPECIALIST_LIST_PLACEHOLDER } from './constants'
+const mergeConfigs = (a: AgentConfig, b: AgentConfig): AgentConfig => {
+  return {
+    ...a,
+    ...b,
+    messageTypes: new Set([...(a.messageTypes ?? []), ...(b.messageTypes ?? [])])
+      .values()
+      .toArray(),
+  }
+}
+
+export const parseAgentConfig = (agentId: string, agent: AgentConfig): AgentConfig => {
+  const parsedConfig = AgentConfig.parse(agent)
+  const baseConfig = { messageTypes: [], ...AgentConfig.parse({}) }
+
+  if (agentId === 'orca') {
+    baseConfig.supervised = false
+    baseConfig.specialist = false
+    baseConfig.mode = 'primary'
+
+    return mergeConfigs(baseConfig, parsedConfig)
+  }
+
+  if (agentId === 'planner') {
+    baseConfig.supervised = false
+    baseConfig.specialist = false
+    baseConfig.mode = 'subagent'
+
+    return mergeConfigs(baseConfig, parsedConfig)
+  }
+
+  if (agent.specialist) {
+    baseConfig.messageTypes.push('task')
+    baseConfig.mode = agent.mode || 'subagent'
+  }
+
+  if (agent.supervised) {
+    baseConfig.messageTypes.push('checkpoint')
+  }
+
+  return mergeConfigs(baseConfig, parsedConfig)
+}
 
 /**
  * Append response format instructions to an agent's prompt.
- * Uses the agent's responseTypes configuration to generate appropriate examples.
+ * Uses the agent's configuration to generate appropriate examples.
  */
-function withProtocol(agentId: string, agent: AgentConfig): AgentConfig {
-  const responseTypes = agent.responseTypes ?? DEFAULT_RESPONSE_TYPES
-  const formatInstructions = generateResponseFormatInstructions(
-    agentId,
-    responseTypes as ResponseType[],
-  )
+function withProtocol(agentId: string, maybeAgent: AgentConfig): AgentConfig {
+  // BLOW UP if our default agents don't pass a strict check
+  const agent = parseAgentConfig(agentId, maybeAgent)
 
-  if (!formatInstructions) {
-    return agent // Orca gets no injection (empty responseTypes)
-  }
+  if (agentId === 'orca') return agent
+
+  const formatInstructions = generateResponseFormatInstructions(agentId, agent)
 
   return {
     ...agent,
@@ -43,13 +78,13 @@ function withProtocol(agentId: string, agent: AgentConfig): AgentConfig {
  */
 export const DEFAULT_AGENTS: Record<string, AgentConfig> = {
   orca: withProtocol('orca', orca),
-  planner: withProtocol('planner', { ...planner, specialist: true }),
-  coder: withProtocol('coder', { ...coder, specialist: true }),
-  tester: withProtocol('tester', { ...tester, specialist: true }),
-  reviewer: withProtocol('reviewer', { ...reviewer, specialist: true }),
-  researcher: withProtocol('researcher', { ...researcher, specialist: true }),
-  'document-writer': withProtocol('document-writer', { ...documentWriter, specialist: true }),
-  architect: withProtocol('architect', { ...architect, specialist: true }),
+  planner: withProtocol('planner', planner),
+  coder: withProtocol('coder', coder),
+  tester: withProtocol('tester', tester),
+  reviewer: withProtocol('reviewer', reviewer),
+  researcher: withProtocol('researcher', researcher),
+  'document-writer': withProtocol('document-writer', documentWriter),
+  architect: withProtocol('architect', architect),
 }
 
 /**
@@ -135,7 +170,7 @@ export function mergeAgentConfigs(
       if (merged.disable) continue
       if (merged.enabled === false) continue
 
-      result[agentId] = merged
+      result[agentId] = parseAgentConfig(agentId, merged)
     } else {
       // Skip agents with enabled: false (though built-ins shouldn't have this)
       if (defaultConfig.enabled === false) continue
@@ -157,7 +192,7 @@ export function mergeAgentConfigs(
         ...userConfig,
       }
 
-      result[agentId] = config
+      result[agentId] = parseAgentConfig(agentId, config)
     }
   }
 

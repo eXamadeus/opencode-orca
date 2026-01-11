@@ -1,7 +1,7 @@
 import { type Plugin, tool } from '@opencode-ai/plugin'
-import { TaskMessage } from '../schemas/messages'
+import { DispatchPayload } from '../schemas/messages'
 import { DEFAULT_AGENTS, mergeAgentConfigs } from './agents'
-import { type AgentConfig, type OrcaSettings, loadUserConfig } from './config'
+import { loadUserConfig } from './config'
 import { type DispatchContext, dispatchToAgent } from './dispatch'
 import { resolveValidationConfig } from './types'
 import { runUpdateNotifier } from './update-notifier'
@@ -25,13 +25,29 @@ export const createOrcaPlugin = (): Plugin => {
     const agents = mergeAgentConfigs(DEFAULT_AGENTS, userConfig?.agents)
     const validationConfig = resolveValidationConfig(userConfig?.settings)
 
-    const agentNames = Object.keys(agents).map((name) => `"${name.toLowerCase()}"`)
-
     // Track plugin entry for update notifier (will be populated in config hook)
     let pluginEntry: string | undefined
     let hasRunUpdateNotifier = false
 
     return {
+      tool: {
+        orca_dispatch: tool({
+          description:
+            'Dispatches a message to a specified agent with an optional session ID to maintain long conversations.',
+          args: DispatchPayload.shape,
+          execute: async (args, ctx) => {
+            const dispatchCtx: DispatchContext = {
+              client,
+              agents,
+              validationConfig,
+              settings: userConfig?.settings,
+              abort: ctx.abort,
+            }
+
+            return dispatchToAgent(args, dispatchCtx)
+          },
+        }),
+      },
       async config(config) {
         config.agent = config.agent ?? {}
 
@@ -83,24 +99,6 @@ export const createOrcaPlugin = (): Plugin => {
             // Silently ignore update notifier errors
           })
         }, 0)
-      },
-
-      tool: {
-        orca_dispatch: tool({
-          description: `Route a task message to a specialist agent. Available agents: ${agentNames.join(', ')}`,
-          args: TaskMessage.shape,
-          async execute(args, ctx) {
-            const dispatchCtx: DispatchContext = {
-              client,
-              agents,
-              validationConfig,
-              settings: userConfig?.settings,
-              abort: ctx.abort,
-            }
-
-            return dispatchToAgent(args, dispatchCtx)
-          },
-        }),
       },
     }
   }

@@ -3,15 +3,8 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import dedent from 'dedent'
 import { z } from 'zod'
-import { AgentId, SessionId, Timestamp } from '../schemas/common'
-import {
-  AnswerMessage,
-  FailureMessage,
-  type MessageType,
-  PlanMessage,
-  QuestionMessage,
-  SuccessMessage,
-} from '../schemas/messages'
+import { AgentId } from '../schemas/common'
+import { MessageType } from '../schemas/messages'
 
 export const PermissionConfig = z
   .strictObject({
@@ -28,11 +21,6 @@ export const PermissionConfig = z
   })
   .describe('Permission settings for agent actions')
 export type PermissionConfig = z.infer<typeof PermissionConfig>
-
-export const ResponseType = z
-  .enum(['answer', 'success', 'plan', 'question', 'failure'] satisfies MessageType[])
-  .describe('Response types that can be returned by user-configurable agents')
-export type ResponseType = z.infer<typeof ResponseType>
 
 export const AgentConfig = z
   .looseObject({
@@ -54,21 +42,21 @@ export const AgentConfig = z
       .boolean()
       .optional()
       .describe('Whether this agent requires approval before dispatch'),
-    responseTypes: z
-      .array(ResponseType)
+    messageTypes: z
+      .array(MessageType)
+      .default([])
       .optional()
       .describe(dedent`
-      Message types this agent can respond with.
-      Used to generate format instructions in the prompt.
-      Defaults to ['answer', 'failure'] for subagents.
-    `),
+        Message types this agent can be sent.
+        Defaults to ['task'] for specialist agents.
+      `),
     specialist: z
       .boolean()
       .optional()
       .describe(dedent`
-      Whether this agent appears in Orca's "Available specialists" list.
-      Defaults to true for built-in subagents, false for user-defined agents.
-    `),
+        Whether this agent appears in Orca's "Available specialists" list.
+        Defaults to true for built-in subagents, false for user-defined agents.
+      `),
   })
   .describe(dedent`
     Agent configuration for the Orca plugin.

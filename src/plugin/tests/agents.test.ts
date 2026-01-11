@@ -1,13 +1,12 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test'
 import {
   DEFAULT_AGENTS,
-  PROTECTED_AGENTS,
-  SPECIALIST_LIST_PLACEHOLDER,
   generateSpecialistList,
   injectSpecialistList,
   mergeAgentConfigs,
 } from '../agents'
 import type { AgentConfig } from '../config'
+import { PROTECTED_AGENTS, SPECIALIST_LIST_PLACEHOLDER } from '../constants'
 import { RESPONSE_FORMAT_INJECTION_HEADER } from '../response-format'
 
 describe('DEFAULT_AGENTS', () => {
@@ -64,14 +63,16 @@ describe('DEFAULT_AGENTS', () => {
   })
 
   test('all subagents have specialist: true', () => {
-    const subagents = Object.entries(DEFAULT_AGENTS).filter(([id]) => id !== 'orca')
+    const subagents = Object.entries(DEFAULT_AGENTS).filter(
+      ([id]) => id !== 'orca' && id !== 'planner',
+    )
     for (const [id, config] of subagents) {
       expect(config.specialist).toBe(true)
     }
   })
 
-  test('orca does not have specialist flag', () => {
-    expect(DEFAULT_AGENTS.orca.specialist).toBeUndefined()
+  test('orca is not a specialist', () => {
+    expect(DEFAULT_AGENTS.orca.specialist).toBeFalse()
   })
 })
 
@@ -108,27 +109,28 @@ describe('Planner agent prompt', () => {
   })
 })
 
-describe('DEFAULT_AGENTS responseTypes', () => {
-  test('orca has empty responseTypes', () => {
-    expect(DEFAULT_AGENTS.orca.responseTypes).toEqual([])
+describe('DEFAULT_AGENTS messageTypes', () => {
+  test('orca has empty messageTypes', () => {
+    expect(DEFAULT_AGENTS.orca.messageTypes).toEqual([])
   })
 
-  test('planner has full responseTypes', () => {
-    expect(DEFAULT_AGENTS.planner.responseTypes).toEqual(['plan', 'answer', 'question', 'failure'])
+  test('planner has full messageTypes', () => {
+    expect(DEFAULT_AGENTS.planner.messageTypes).toMatchInlineSnapshot(`
+      [
+        "question",
+      ]
+    `)
   })
 
-  test('exec specialists have success in responseTypes', () => {
-    const execSpecialists = ['coder', 'tester', 'document-writer']
-    for (const id of execSpecialists) {
-      expect(DEFAULT_AGENTS[id].responseTypes).toEqual(['success', 'answer', 'question', 'failure'])
-    }
-  })
-
-  test('info specialists have answer-focused responseTypes', () => {
-    const infoSpecialists = ['reviewer', 'researcher', 'architect']
-    for (const id of infoSpecialists) {
-      expect(DEFAULT_AGENTS[id].responseTypes).toEqual(['answer', 'question', 'failure'])
-    }
+  test.each([
+    'coder',
+    'tester',
+    'document-writer',
+    'architect',
+    'researcher',
+    'reviewer',
+  ] satisfies (keyof typeof DEFAULT_AGENTS)[])('%s has correct messageTypes', (specialist) => {
+    expect(DEFAULT_AGENTS[specialist].messageTypes).toMatchSnapshot()
   })
 })
 
@@ -152,16 +154,16 @@ describe('protected agents in mergeAgentConfigs', () => {
 
   test('orca config cannot be overridden', () => {
     const defaults: Record<string, AgentConfig> = {
-      orca: { mode: 'primary', responseTypes: [], prompt: 'Default prompt', color: '#000000' },
+      orca: { mode: 'primary', messageTypes: [], prompt: 'Default prompt', color: '#000000' },
     }
     const user: Record<string, AgentConfig> = {
-      orca: { responseTypes: ['answer'], prompt: 'Custom prompt', model: 'gpt-4o' },
+      orca: { messageTypes: ['answer'], prompt: 'Custom prompt', model: 'gpt-4o' },
     }
     const result = mergeAgentConfigs(defaults, user)
 
     // Entire config should be unchanged
     expect(result.orca).toEqual(defaults.orca)
-    expect(result.orca.responseTypes).toEqual([])
+    expect(result.orca.messageTypes).toEqual([])
     expect(result.orca.prompt).toBe('Default prompt')
     expect(result.orca.model).toBeUndefined()
   })
@@ -170,25 +172,25 @@ describe('protected agents in mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       planner: {
         mode: 'subagent',
-        responseTypes: ['plan', 'answer', 'question', 'failure'],
+        messageTypes: ['plan', 'answer', 'question', 'failure'],
         prompt: 'Default planner prompt',
       },
     }
     const user: Record<string, AgentConfig> = {
-      planner: { responseTypes: ['answer'], prompt: 'Custom prompt', model: 'gpt-4o' },
+      planner: { messageTypes: ['answer'], prompt: 'Custom prompt', model: 'gpt-4o' },
     }
     const result = mergeAgentConfigs(defaults, user)
 
     // Entire config should be unchanged
     expect(result.planner).toEqual(defaults.planner)
-    expect(result.planner.responseTypes).toEqual(['plan', 'answer', 'question', 'failure'])
+    expect(result.planner.messageTypes).toEqual(['plan', 'answer', 'question', 'failure'])
     expect(result.planner.prompt).toBe('Default planner prompt')
     expect(result.planner.model).toBeUndefined()
   })
 
   test('emits warning when user tries to override orca', () => {
     const defaults: Record<string, AgentConfig> = {
-      orca: { mode: 'primary', responseTypes: [] },
+      orca: { mode: 'primary', messageTypes: [] },
     }
     const user: Record<string, AgentConfig> = {
       orca: { model: 'gpt-4o' },
@@ -241,29 +243,29 @@ describe('protected agents in mergeAgentConfigs', () => {
     expect(warnSpy).not.toHaveBeenCalled()
   })
 
-  test('non-protected agents can override responseTypes', () => {
+  test('non-protected agents can override messageTypes', () => {
     const defaults: Record<string, AgentConfig> = {
-      coder: { mode: 'subagent', responseTypes: ['answer', 'failure'] },
+      coder: { mode: 'subagent', messageTypes: ['answer', 'failure'] },
     }
     const user: Record<string, AgentConfig> = {
-      coder: { responseTypes: ['answer', 'question'] },
+      coder: { messageTypes: ['answer', 'question'] },
     }
     const result = mergeAgentConfigs(defaults, user)
-    expect(result.coder.responseTypes).toEqual(['answer', 'question'])
+    expect(result.coder.messageTypes).toEqual(['answer', 'question'])
   })
 
-  test('custom agents can set responseTypes', () => {
+  test('custom agents can set messageTypes', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent' },
     }
     const user: Record<string, AgentConfig> = {
       'my-specialist': {
         mode: 'subagent',
-        responseTypes: ['answer', 'question'],
+        messageTypes: ['answer', 'question'],
       },
     }
     const result = mergeAgentConfigs(defaults, user)
-    expect(result['my-specialist'].responseTypes).toEqual(['answer', 'question'])
+    expect(result['my-specialist'].messageTypes).toEqual(['answer', 'question'])
   })
 })
 

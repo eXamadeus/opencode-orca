@@ -1,4 +1,4 @@
-import type { OrcaSettings, ResponseType } from './config'
+import type { OrcaSettings } from './config'
 
 /**
  * Validation configuration for message handling
@@ -9,11 +9,6 @@ export interface ValidationConfig {
   /** Wrap plain text responses as AnswerMessage envelopes (default: true) */
   wrapPlainText: boolean
 }
-
-/**
- * Default response types for specialist agents
- */
-export const DEFAULT_RESPONSE_TYPES: ResponseType[] = ['answer', 'failure']
 
 /**
  * Default validation configuration

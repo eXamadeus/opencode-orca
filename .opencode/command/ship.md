@@ -4,7 +4,7 @@ description: Verify issue satisfaction and ship changes via PR
 
 ## /ship Command
 
-Verify that current changes satisfy the linked issue, then commit and create a PR.
+Verify that current changes satisfy the linked issue, then commit, and create a PR.
 
 ### Input
 - Commit message override (optional): $ARGUMENTS
@@ -283,11 +283,11 @@ Since there's no issue to verify against, confirm the changes are ready to ship:
 
 1. **Changes are coherent**: Single purpose, not a grab-bag of unrelated edits
 2. **No WIP markers**: No TODO, FIXME, or incomplete code
-3. **Tests pass** (if applicable): `bun test` or equivalent
+3. **Validations pass** (if applicable): `bun validate`
 
 ### Summarize the Work
 
-Provide a brief summary of what the changes accomplish:
+Provide a brief summary of what the changes achieve:
 
 > **Bonus work detected:**
 > - Type: [BRANCH_TYPE]

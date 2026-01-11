@@ -8,10 +8,10 @@
     "executor": { "model": "anthropic/claude-opus-4-5" },
     "strategist": { "mode": "subagent" },
     "orca": { "model": "openai/gpt-5.2", "reasoningEffort": "low" },
-    "github": { "model": "openai/gpt-5.2", "reasoningEffort": "medium" },
+    "github": { "model": "openai/gpt-5.2", "reasoningEffort": "medium", "specialist": true },
     "planner": { "model": "anthropic/claude-opus-4-5" },
     "architect": { "model": "anthropic/claude-opus-4-5" },
     "coder": { "model": "anthropic/claude-opus-4-5" },
-    "product-manager": { "disable": false }
+    "product-manager": { "specialist": true }
   }
 }

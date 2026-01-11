@@ -1,23 +1,19 @@
 import { describe, expect, test } from 'bun:test'
 import { merge } from 'lodash'
-import { MessageEnvelope } from '../../schemas/messages'
-import {
-  AgentConfig,
-  OrcaSettings,
-  OrcaUserConfig,
-  PermissionConfig,
-  ResponseType,
-} from '../config'
+import { AgentConfig, OrcaSettings, OrcaUserConfig, PermissionConfig } from '../config'
 
 describe('config', () => {
   describe('PermissionConfig', () => {
+    const withDefaults = (config: Partial<PermissionConfig>) =>
+      merge(PermissionConfig.parse({}), config)
+
     test('accepts valid permission config', () => {
       const config = {
         edit: 'ask' as const,
         bash: 'allow' as const,
         webfetch: 'deny' as const,
       }
-      expect(PermissionConfig.parse(config)).toEqual(config)
+      expect(PermissionConfig.parse(config)).toEqual(withDefaults(config))
     })
 
     test('accepts bash as object with patterns', () => {
@@ -45,9 +41,11 @@ describe('config', () => {
   })
 
   describe('AgentConfig', () => {
+    const withDefaults = (config: Partial<AgentConfig>) => merge(AgentConfig.parse({}), config)
+
     test('accepts minimal agent config', () => {
       const config = {}
-      expect(AgentConfig.parse(config)).toEqual(config)
+      expect(AgentConfig.parse(config)).toEqual(withDefaults(config))
     })
 
     test('accepts full agent config', () => {
@@ -64,18 +62,18 @@ describe('config', () => {
         maxSteps: 10,
         permission: { edit: 'ask' as const },
       }
-      expect(AgentConfig.parse(config)).toEqual(config)
+      expect(AgentConfig.parse(config)).toEqual(withDefaults(config))
     })
 
     test('validates color format', () => {
-      expect(AgentConfig.parse({ color: '#AABBCC' })).toEqual({ color: '#AABBCC' })
+      expect(AgentConfig.parse({ color: '#AABBCC' })).toEqual(withDefaults({ color: '#AABBCC' }))
       expect(() => AgentConfig.parse({ color: 'red' })).toThrow()
       expect(() => AgentConfig.parse({ color: '#GGG' })).toThrow()
     })
 
     test('validates temperature range', () => {
-      expect(AgentConfig.parse({ temperature: 0 })).toEqual({ temperature: 0 })
-      expect(AgentConfig.parse({ temperature: 2 })).toEqual({ temperature: 2 })
+      expect(AgentConfig.parse({ temperature: 0 })).toEqual(withDefaults({ temperature: 0 }))
+      expect(AgentConfig.parse({ temperature: 2 })).toEqual(withDefaults({ temperature: 2 }))
       expect(() => AgentConfig.parse({ temperature: -1 })).toThrow()
       expect(() => AgentConfig.parse({ temperature: 3 })).toThrow()
     })
@@ -89,14 +87,14 @@ describe('config', () => {
         customProviderOption: 'value',
       }
       const result = AgentConfig.parse(config)
-      expect(result).toEqual(config)
+      expect(result).toEqual(withDefaults(config))
       expect(result.reasoningEffort).toBe('high')
       expect(result.customProviderOption).toBe('value')
     })
 
     test('accepts supervised flag', () => {
-      expect(AgentConfig.parse({ supervised: true })).toEqual({ supervised: true })
-      expect(AgentConfig.parse({ supervised: false })).toEqual({ supervised: false })
+      expect(AgentConfig.parse({ supervised: true })).toEqual(withDefaults({ supervised: true }))
+      expect(AgentConfig.parse({ supervised: false })).toEqual(withDefaults({ supervised: false }))
     })
 
     test('allows supervised to be undefined (optional)', () => {
@@ -105,24 +103,24 @@ describe('config', () => {
       expect(result.supervised).toBeUndefined()
     })
 
-    test('accepts responseTypes array', () => {
-      const result = AgentConfig.parse({ responseTypes: ['answer', 'failure'] })
-      expect(result.responseTypes).toEqual(['answer', 'failure'])
+    test('accepts messageTypes array', () => {
+      const result = AgentConfig.parse({ messageTypes: ['answer', 'failure'] })
+      expect(result.messageTypes).toEqual(['answer', 'failure'])
     })
 
-    test('accepts empty responseTypes array', () => {
-      const result = AgentConfig.parse({ responseTypes: [] })
-      expect(result.responseTypes).toEqual([])
+    test('accepts empty messageTypes array', () => {
+      const result = AgentConfig.parse({ messageTypes: [] })
+      expect(result.messageTypes).toEqual([])
     })
 
-    test('rejects invalid responseTypes values', () => {
-      expect(() => AgentConfig.parse({ responseTypes: ['invalid'] })).toThrow()
-      expect(() => AgentConfig.parse({ responseTypes: ['result'] })).toThrow()
+    test('rejects invalid messageTypes values', () => {
+      expect(() => AgentConfig.parse({ messageTypes: ['invalid'] })).toThrow()
+      expect(() => AgentConfig.parse({ messageTypes: ['result'] })).toThrow()
     })
 
     test('accepts specialist boolean', () => {
-      expect(AgentConfig.parse({ specialist: true })).toEqual({ specialist: true })
-      expect(AgentConfig.parse({ specialist: false })).toEqual({ specialist: false })
+      expect(AgentConfig.parse({ specialist: true })).toEqual(withDefaults({ specialist: true }))
+      expect(AgentConfig.parse({ specialist: false })).toEqual(withDefaults({ specialist: false }))
     })
 
     test('allows specialist to be undefined (optional)', () => {
@@ -132,44 +130,14 @@ describe('config', () => {
     })
 
     test('accepts enabled boolean', () => {
-      expect(AgentConfig.parse({ enabled: true })).toEqual({ enabled: true })
-      expect(AgentConfig.parse({ enabled: false })).toEqual({ enabled: false })
+      expect(AgentConfig.parse({ enabled: true })).toEqual(withDefaults({ enabled: true }))
+      expect(AgentConfig.parse({ enabled: false })).toEqual(withDefaults({ enabled: false }))
     })
 
     test('allows enabled to be undefined (optional)', () => {
       const config = { model: 'some-model' }
       const result = AgentConfig.parse(config)
       expect(result.enabled).toBeUndefined()
-    })
-  })
-
-  describe('ResponseType', () => {
-    test('accepts valid response types', () => {
-      expect(ResponseType.parse('answer')).toBe('answer')
-      expect(ResponseType.parse('plan')).toBe('plan')
-      expect(ResponseType.parse('question')).toBe('question')
-      expect(ResponseType.parse('failure')).toBe('failure')
-      expect(ResponseType.parse('success')).toBe('success')
-    })
-
-    test('rejects invalid response types', () => {
-      expect(() => ResponseType.parse('result')).toThrow()
-      expect(() => ResponseType.parse('invalid')).toThrow()
-    })
-
-    test('every ResponseType is a valid MessageType (sync check)', () => {
-      // Get all valid message types from the discriminated union
-      // Each option has a literal 'type' field with a .value property
-      const messageTypes = new Set(MessageEnvelope.options.map((schema) => schema.shape.type.value))
-
-      // Get all response types from the enum (.options is the public API)
-      const responseTypes = ResponseType.options
-
-      // Every response type must be a valid message type
-      // (ResponseType is intentionally a subset - excludes task, checkpoint, interrupt)
-      for (const responseType of responseTypes) {
-        expect(messageTypes.has(responseType)).toBe(true)
-      }
     })
   })
 
@@ -264,16 +232,16 @@ describe('config', () => {
       const config = {
         agents: {
           // Override default agent
-          coder: {
+          coder: AgentConfig.parse({
             model: 'openai/gpt-4o',
             temperature: 0.5,
-          },
+          }),
           // Add custom agent
-          'my-specialist': {
+          'my-specialist': AgentConfig.parse({
             mode: 'subagent' as const,
             description: 'My custom specialist',
             prompt: 'You are a custom specialist.',
-          },
+          }),
         },
         settings: {
           defaultSupervised: false,
@@ -286,7 +254,7 @@ describe('config', () => {
     test('accepts config with only agents', () => {
       const config = {
         agents: {
-          orca: { model: 'openai/gpt-4o' },
+          orca: AgentConfig.parse({ model: 'openai/gpt-4o' }),
         },
       }
       expect(OrcaUserConfig.parse(config)).toEqual(withDefaults(config))
@@ -302,7 +270,7 @@ describe('config', () => {
     test('accepts disabled agents', () => {
       const config = {
         agents: {
-          architect: { disable: true },
+          architect: AgentConfig.parse({ disable: true }),
         },
       }
       expect(OrcaUserConfig.parse(config)).toEqual(withDefaults(config))

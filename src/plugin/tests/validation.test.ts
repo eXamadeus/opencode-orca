@@ -9,12 +9,12 @@ import {
 } from '../validation'
 
 describe('validation', () => {
+  const agentId = 'researcher'
+
   describe('validateMessage', () => {
     test('parses valid JSON message envelope', () => {
-      const validMessage = {
+      const validMessage: AnswerMessage = {
         type: 'answer',
-        timestamp: '2024-01-01T00:00:00.000Z',
-        agent_id: 'coder',
         content: 'Task completed successfully',
       }
 
@@ -39,7 +39,7 @@ describe('validation', () => {
     test('returns error for invalid schema', () => {
       const invalidMessage = {
         type: 'answer',
-        // missing timestamp, agent_id, content
+        // missing timestamp, content
       }
 
       const result = validateMessage(JSON.stringify(invalidMessage))
@@ -54,26 +54,22 @@ describe('validation', () => {
   describe('wrapAsAnswerMessage', () => {
     test('wraps plain text as AnswerMessage envelope', () => {
       const text = 'Here is my response'
-      const agentId = 'researcher'
-
-      const result = wrapAsAnswerMessage(text, agentId)
+      const result = wrapAsAnswerMessage(text)
 
       expect(result.type).toBe('answer')
-      expect(result.agent_id).toBe(agentId)
       expect(result.content).toBe(text)
       // Response messages don't have session_id
       expect((result as Record<string, unknown>).session_id).toBeUndefined()
-      expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     })
   })
 
   describe('createFailureMessage', () => {
     test('creates failure envelope with all fields', () => {
-      const result = createFailureMessage(
-        'VALIDATION_ERROR',
-        'Something went wrong',
-        'Detailed cause',
-      )
+      const result = createFailureMessage({
+        code: 'VALIDATION_ERROR',
+        message: 'Something went wrong',
+        cause: 'Detailed cause',
+      })
 
       expect(result.type).toBe('failure')
       expect(result.code).toBe('VALIDATION_ERROR')
@@ -84,7 +80,10 @@ describe('validation', () => {
     })
 
     test('creates failure envelope without cause', () => {
-      const result = createFailureMessage('TIMEOUT', 'Request timed out')
+      const result = createFailureMessage({
+        code: 'TIMEOUT',
+        message: 'Request timed out',
+      })
 
       expect(result.type).toBe('failure')
       expect(result.code).toBe('TIMEOUT')
@@ -117,12 +116,37 @@ describe('validation', () => {
     test('returns valid message on first attempt', async () => {
       const validMessage: AnswerMessage = {
         type: 'answer',
-        timestamp: '2024-01-01T00:00:00.000Z',
-        agent_id: 'coder',
         content: 'Done',
       }
 
-      const result = await validateWithRetry(JSON.stringify(validMessage), 'coder')
+      const result = await validateWithRetry(JSON.stringify(validMessage))
+
+      expect(result.type).toBe('answer')
+    })
+
+    test('strips markdown code fence and parses JSON', async () => {
+      const validMessage: AnswerMessage = {
+        type: 'answer',
+        content: 'Done',
+      }
+
+      const wrapped = `\`\`\`json\n${JSON.stringify(validMessage)}\n\`\`\``
+      const result = await validateWithRetry(wrapped)
+
+      expect(result.type).toBe('answer')
+      if (result.type === 'answer') {
+        expect(result.content).toBe('Done')
+      }
+    })
+
+    test('strips markdown code fence without language specifier', async () => {
+      const validMessage: AnswerMessage = {
+        type: 'answer',
+        content: 'Done',
+      }
+
+      const wrapped = `\`\`\`\n${JSON.stringify(validMessage)}\n\`\`\``
+      const result = await validateWithRetry(wrapped)
 
       expect(result.type).toBe('answer')
     })
@@ -130,7 +154,7 @@ describe('validation', () => {
     test('wraps plain text when wrapPlainText is enabled', async () => {
       const plainText = 'Just a simple response'
 
-      const result = await validateWithRetry(plainText, 'researcher', {
+      const result = await validateWithRetry(plainText, {
         maxRetries: 2,
         wrapPlainText: true,
       })
@@ -138,14 +162,13 @@ describe('validation', () => {
       expect(result.type).toBe('answer')
       if (result.type === 'answer') {
         expect(result.content).toBe(plainText)
-        expect(result.agent_id).toBe('researcher')
       }
     })
 
     test('does not wrap plain text when wrapPlainText is disabled', async () => {
       const plainText = 'Just a simple response'
 
-      const result = await validateWithRetry(plainText, 'researcher', {
+      const result = await validateWithRetry(plainText, {
         maxRetries: 0,
         wrapPlainText: false,
       })
@@ -157,8 +180,6 @@ describe('validation', () => {
       let attempts = 0
       const validMessage: AnswerMessage = {
         type: 'answer',
-        timestamp: '2024-01-01T00:00:00.000Z',
-        agent_id: 'coder',
         content: 'Corrected response',
       }
 
@@ -169,7 +190,6 @@ describe('validation', () => {
 
       const result = await validateWithRetry(
         '{ invalid json',
-        'coder',
         { maxRetries: 2, wrapPlainText: false },
         retrySender,
       )
@@ -188,7 +208,6 @@ describe('validation', () => {
 
       const result = await validateWithRetry(
         '{ invalid json',
-        'coder',
         { maxRetries: 2, wrapPlainText: false },
         retrySender,
       )
@@ -201,7 +220,7 @@ describe('validation', () => {
     })
 
     test('returns failure immediately without retrySender', async () => {
-      const result = await validateWithRetry('{ invalid json', 'coder', {
+      const result = await validateWithRetry('{ invalid json', {
         maxRetries: 2,
         wrapPlainText: false,
       })
