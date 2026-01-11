@@ -1,12 +1,7 @@
 {
   "settings": {
     "defaultSupervised": false,
-    "defaultModel": {
-      "model": "openai/gpt-5.2",
-      "reasoningEffort": "low",
-      "reasoningSummary": "auto",
-      "textVerbosity": "medium"
-    },
+    "defaultModel": "openai/gpt-5.2",
     "validation": { "maxRetries": 3, "wrapPlainText": true }
   },
   "agents": {
@@ -16,6 +11,7 @@
     "github": { "model": "openai/gpt-5.2", "reasoningEffort": "medium" },
     "planner": { "model": "anthropic/claude-opus-4-5" },
     "architect": { "model": "anthropic/claude-opus-4-5" },
-    "coder": { "model": "anthropic/claude-opus-4-5" }
+    "coder": { "model": "anthropic/claude-opus-4-5" },
+    "product-manager": { "disable": false }
   }
 }

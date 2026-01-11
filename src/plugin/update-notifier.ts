@@ -213,20 +213,24 @@ export async function runUpdateNotifier(ctx: UpdateNotifierContext): Promise<voi
     return
   }
 
-  const cache = readCache()
-  const { isPinned, pinnedVersion } = parsePluginEntry(pluginEntry)
+  const previousCache = readCache()
 
-  // First run: silently create cache, no notification
-  if (!cache) {
-    writeCache({
-      lastCheck: Date.now(),
-      lastKnownVersion: currentVersion,
-      latestStableVersion: null,
-    })
+  // If we checked within the last 24 hours, exit early
+  if ((previousCache?.lastCheck ?? 0) >= Date.now() - CHECK_INTERVAL_MS) {
     return
   }
 
-  // Check if we just got upgraded (unpinned users auto-update)
+  const defaultCache = {
+    lastCheck: Date.now(),
+    lastKnownVersion: currentVersion,
+    latestStableVersion: null,
+  }
+
+  // silently create cache
+  if (!readCache()) writeCache(defaultCache)
+
+  const cache = readCache() || defaultCache // this is for TypeScript
+  const { isPinned, pinnedVersion } = parsePluginEntry(pluginEntry)
   const wasUpgraded = cache.lastKnownVersion !== currentVersion
 
   if (wasUpgraded && !isPinned) {
