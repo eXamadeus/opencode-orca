@@ -1,7 +1,5 @@
 ---
 description: Pick up an issue and set up development environment
-agent: executor
-subtask: true
 ---
 
 ## /work Command

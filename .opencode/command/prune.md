@@ -1,7 +1,5 @@
 ---
 description: Clean up merged worktrees and stale branches
-agent: github
-subtask: true
 ---
 
 ## /prune Command
