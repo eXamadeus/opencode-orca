@@ -14,15 +14,13 @@ import { generateResponseFormatInstructions } from './response-format'
 const mergeConfigs = (a: AgentConfig, b: AgentConfig): AgentConfig => {
   return {
     ...merge(cloneDeep(a), cloneDeep(b)),
-    messageTypes: new Set(b.messageTypes?.length ? b.messageTypes : (a.messageTypes ?? []))
-      .values()
-      .toArray(),
+    accepts: new Set(b.accepts?.length ? b.accepts : (a.accepts ?? [])).values().toArray(),
   }
 }
 
 export const parseAgentConfig = (agentId: string, agent: AgentConfig): AgentConfig => {
   const parsedConfig = AgentConfig.parse(agent)
-  const baseConfig = { messageTypes: [], ...AgentConfig.parse({}) }
+  const baseConfig = { accepts: [], ...AgentConfig.parse({}) }
 
   if (agentId === 'orca') {
     baseConfig.supervised = false
@@ -41,7 +39,7 @@ export const parseAgentConfig = (agentId: string, agent: AgentConfig): AgentConf
   }
 
   if (agent.specialist) {
-    baseConfig.messageTypes.push('task', 'question')
+    baseConfig.accepts.push('task', 'question')
     baseConfig.mode = agent.mode || 'subagent'
   }
 

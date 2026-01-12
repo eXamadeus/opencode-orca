@@ -103,19 +103,19 @@ describe('config', () => {
       expect(result.supervised).toBeUndefined()
     })
 
-    test('accepts messageTypes array', () => {
-      const result = AgentConfig.parse({ messageTypes: ['task'] })
-      expect(result.messageTypes).toEqual(['task'])
+    test('accepts accepts array', () => {
+      const result = AgentConfig.parse({ accepts: ['task'] })
+      expect(result.accepts).toEqual(['task'])
     })
 
-    test('accepts empty messageTypes array', () => {
-      const result = AgentConfig.parse({ messageTypes: [] })
-      expect(result.messageTypes).toEqual([])
+    test('accepts empty accepts array', () => {
+      const result = AgentConfig.parse({ accepts: [] })
+      expect(result.accepts).toEqual([])
     })
 
-    test('rejects invalid messageTypes values', () => {
-      expect(() => AgentConfig.parse({ messageTypes: ['invalid'] })).toThrow()
-      expect(() => AgentConfig.parse({ messageTypes: ['result'] })).toThrow()
+    test('rejects invalid accepts values', () => {
+      expect(() => AgentConfig.parse({ accepts: ['invalid'] })).toThrow()
+      expect(() => AgentConfig.parse({ accepts: ['result'] })).toThrow()
     })
 
     test('accepts specialist boolean', () => {

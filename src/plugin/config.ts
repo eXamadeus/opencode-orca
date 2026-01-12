@@ -42,13 +42,13 @@ export const AgentConfig = z
       .boolean()
       .optional()
       .describe('Whether this agent requires approval before dispatch'),
-    messageTypes: z
+    accepts: z
       .array(QuestionMessage.shape.type.or(TaskMessage.shape.type))
       .default([])
       .optional()
       .describe(dedent`
-        Message types this agent can be dispatched.
-        Defaults to ['task'] for specialist agents.
+        Message types this agent accepts.
+        Defaults to ['task', 'question'] for specialist agents.
       `),
     specialist: z
       .boolean()

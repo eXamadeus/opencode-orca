@@ -116,7 +116,7 @@ export const RESPONSE_FORMAT_INJECTION_HEADER = '## Response Format (REQUIRED)'
 export const responseTypesForAgentConfig = (agentConfig: AgentConfig): MessageType[] => {
   const responseTypes: Set<MessageType> = new Set()
 
-  for (const type of agentConfig.messageTypes ?? []) {
+  for (const type of agentConfig.accepts ?? []) {
     const reciprocals = responseReciprocal[type]
     if (reciprocals) {
       for (const r of reciprocals) responseTypes.add(r)

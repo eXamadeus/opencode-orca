@@ -1,37 +1,37 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
-exports[`DEFAULT_AGENTS messageTypes coder has correct messageTypes 1`] = `
+exports[`DEFAULT_AGENTS accepts coder has correct accepts 1`] = `
 [
   "task",
 ]
 `;
 
-exports[`DEFAULT_AGENTS messageTypes tester has correct messageTypes 1`] = `
+exports[`DEFAULT_AGENTS accepts tester has correct accepts 1`] = `
 [
   "task",
   "question",
 ]
 `;
 
-exports[`DEFAULT_AGENTS messageTypes document-writer has correct messageTypes 1`] = `
+exports[`DEFAULT_AGENTS accepts document-writer has correct accepts 1`] = `
 [
   "task",
 ]
 `;
 
-exports[`DEFAULT_AGENTS messageTypes architect has correct messageTypes 1`] = `
+exports[`DEFAULT_AGENTS accepts architect has correct accepts 1`] = `
 [
   "question",
 ]
 `;
 
-exports[`DEFAULT_AGENTS messageTypes researcher has correct messageTypes 1`] = `
+exports[`DEFAULT_AGENTS accepts researcher has correct accepts 1`] = `
 [
   "question",
 ]
 `;
 
-exports[`DEFAULT_AGENTS messageTypes reviewer has correct messageTypes 1`] = `
+exports[`DEFAULT_AGENTS accepts reviewer has correct accepts 1`] = `
 [
   "task",
   "question",

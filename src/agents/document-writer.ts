@@ -4,7 +4,7 @@ import type { AgentConfig } from '../plugin/config'
 export const documentWriter: AgentConfig = {
   mode: 'subagent',
   specialist: true,
-  messageTypes: ['task'],
+  accepts: ['task'],
   description: 'Creates technical documentation, READMEs, and guides',
   prompt: dedent`
     You are a technical writing agent that creates clear documentation.

@@ -110,13 +110,13 @@ describe('Planner agent prompt', () => {
   })
 })
 
-describe('DEFAULT_AGENTS messageTypes', () => {
-  test('orca has empty messageTypes', () => {
-    expect(DEFAULT_AGENTS.orca.messageTypes).toEqual([])
+describe('DEFAULT_AGENTS accepts', () => {
+  test('orca has empty accepts', () => {
+    expect(DEFAULT_AGENTS.orca.accepts).toEqual([])
   })
 
-  test('planner has full messageTypes', () => {
-    expect(DEFAULT_AGENTS.planner.messageTypes).toMatchInlineSnapshot('[]')
+  test('planner has empty accepts', () => {
+    expect(DEFAULT_AGENTS.planner.accepts).toEqual([])
   })
 
   test.each([
@@ -126,8 +126,8 @@ describe('DEFAULT_AGENTS messageTypes', () => {
     'architect',
     'researcher',
     'reviewer',
-  ] satisfies (keyof typeof DEFAULT_AGENTS)[])('%s has correct messageTypes', (specialist) => {
-    expect(DEFAULT_AGENTS[specialist].messageTypes).toMatchSnapshot()
+  ] satisfies (keyof typeof DEFAULT_AGENTS)[])('%s has correct accepts', (specialist) => {
+    expect(DEFAULT_AGENTS[specialist].accepts).toMatchSnapshot()
   })
 })
 
@@ -151,16 +151,16 @@ describe('protected agents in mergeAgentConfigs', () => {
 
   test('orca config cannot be overridden', () => {
     const defaults: Record<string, AgentConfig> = {
-      orca: { mode: 'primary', messageTypes: [], prompt: 'Default prompt', color: '#000000' },
+      orca: { mode: 'primary', accepts: [], prompt: 'Default prompt', color: '#000000' },
     }
     const user: Record<string, AgentConfig> = {
-      orca: { messageTypes: ['task'], prompt: 'Custom prompt', model: 'gpt-4o' },
+      orca: { accepts: ['task'], prompt: 'Custom prompt', model: 'gpt-4o' },
     }
     const result = mergeAgentConfigs(defaults, user)
 
     // Entire config should be unchanged
     expect(result.orca).toEqual(defaults.orca)
-    expect(result.orca.messageTypes).toEqual([])
+    expect(result.orca.accepts).toEqual([])
     expect(result.orca.prompt).toBe('Default prompt')
     expect(result.orca.model).toBeUndefined()
   })
@@ -169,25 +169,25 @@ describe('protected agents in mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       planner: {
         mode: 'subagent',
-        messageTypes: ['question'],
+        accepts: ['question'],
         prompt: 'Default planner prompt',
       },
     }
     const user: Record<string, AgentConfig> = {
-      planner: { messageTypes: ['task'], prompt: 'Custom prompt', model: 'gpt-4o' },
+      planner: { accepts: ['task'], prompt: 'Custom prompt', model: 'gpt-4o' },
     }
     const result = mergeAgentConfigs(defaults, user)
 
     // Entire config should be unchanged
     expect(result.planner).toEqual(defaults.planner)
-    expect(result.planner.messageTypes).toEqual(['question'])
+    expect(result.planner.accepts).toEqual(['question'])
     expect(result.planner.prompt).toBe('Default planner prompt')
     expect(result.planner.model).toBeUndefined()
   })
 
   test('emits warning when user tries to override orca', () => {
     const defaults: Record<string, AgentConfig> = {
-      orca: { mode: 'primary', messageTypes: [] },
+      orca: { mode: 'primary', accepts: [] },
     }
     const user: Record<string, AgentConfig> = {
       orca: { model: 'gpt-4o' },
@@ -240,29 +240,29 @@ describe('protected agents in mergeAgentConfigs', () => {
     expect(warnSpy).not.toHaveBeenCalled()
   })
 
-  test('non-protected agents can override messageTypes', () => {
+  test('non-protected agents can override accepts', () => {
     const defaults: Record<string, AgentConfig> = {
-      coder: { mode: 'subagent', messageTypes: ['task'] },
+      coder: { mode: 'subagent', accepts: ['task'] },
     }
     const user: Record<string, AgentConfig> = {
-      coder: { messageTypes: ['question'] },
+      coder: { accepts: ['question'] },
     }
     const result = mergeAgentConfigs(defaults, user)
-    expect(result.coder.messageTypes).toEqual(['question'])
+    expect(result.coder.accepts).toEqual(['question'])
   })
 
-  test('custom agents can set messageTypes', () => {
+  test('custom agents can set accepts', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent' },
     }
     const user: Record<string, AgentConfig> = {
       'my-specialist': {
         mode: 'subagent',
-        messageTypes: ['task', 'question'],
+        accepts: ['task', 'question'],
       },
     }
     const result = mergeAgentConfigs(defaults, user)
-    expect(result['my-specialist'].messageTypes).toEqual(['task', 'question'])
+    expect(result['my-specialist'].accepts).toEqual(['task', 'question'])
   })
 })
 
@@ -709,9 +709,9 @@ describe('parseAgentConfig', () => {
       expect(result.color).toBe('#FF0000')
     })
 
-    test('initializes messageTypes to empty array', () => {
+    test('initializes accepts to empty array', () => {
       const result = parseAgentConfig('orca', {})
-      expect(result.messageTypes).toEqual([])
+      expect(result.accepts).toEqual([])
     })
   })
 
@@ -753,26 +753,26 @@ describe('parseAgentConfig', () => {
       expect(result.temperature).toBe(0.5)
     })
 
-    test('initializes messageTypes to empty array', () => {
+    test('initializes accepts to empty array', () => {
       const result = parseAgentConfig('planner', {})
-      expect(result.messageTypes).toEqual([])
+      expect(result.accepts).toEqual([])
     })
   })
 
   describe('specialist agents', () => {
-    test('defaults to task and question messageTypes when specialist: true', () => {
+    test('defaults to task and question accepts when specialist: true', () => {
       const result = parseAgentConfig('coder', { specialist: true })
-      expect(result.messageTypes).toEqual(['task', 'question'])
+      expect(result.accepts).toEqual(['task', 'question'])
     })
 
-    test('does not add messageTypes when specialist: false', () => {
+    test('does not add accepts when specialist: false', () => {
       const result = parseAgentConfig('coder', { specialist: false })
-      expect(result.messageTypes).toEqual([])
+      expect(result.accepts).toEqual([])
     })
 
-    test('does not add messageTypes when specialist not set', () => {
+    test('does not add accepts when specialist not set', () => {
       const result = parseAgentConfig('coder', {})
-      expect(result.messageTypes).toEqual([])
+      expect(result.accepts).toEqual([])
     })
 
     test('defaults to subagent mode when specialist: true and no mode provided', () => {
@@ -785,20 +785,20 @@ describe('parseAgentConfig', () => {
       expect(result.mode).toBe('primary')
     })
 
-    test('provided messageTypes completely replaces defaults', () => {
+    test('provided accepts completely replaces defaults', () => {
       const result = parseAgentConfig('coder', {
         specialist: true,
-        messageTypes: ['task'],
+        accepts: ['task'],
       })
-      expect(result.messageTypes).toEqual(['task'])
-      expect(result.messageTypes).not.toContain('question')
+      expect(result.accepts).toEqual(['task'])
+      expect(result.accepts).not.toContain('question')
     })
 
-    test('deduplicates messageTypes using Set', () => {
+    test('deduplicates accepts using Set', () => {
       const result = parseAgentConfig('coder', {
-        messageTypes: ['question', 'question', 'task'],
+        accepts: ['question', 'question', 'task'],
       })
-      expect(result.messageTypes).toEqual(['question', 'task'])
+      expect(result.accepts).toEqual(['question', 'task'])
     })
   })
 
@@ -818,9 +818,9 @@ describe('parseAgentConfig', () => {
       expect((result as Record<string, unknown>).customField).toBe('value')
     })
 
-    test('provides default messageTypes as empty array', () => {
+    test('provides default accepts as empty array', () => {
       const result = parseAgentConfig('custom-agent', {})
-      expect(result.messageTypes).toEqual([])
+      expect(result.accepts).toEqual([])
     })
   })
 })

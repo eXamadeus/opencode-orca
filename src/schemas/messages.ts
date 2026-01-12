@@ -33,49 +33,59 @@ export const Annotation = z.strictObject({
 })
 export type Annotation = z.infer<typeof Annotation>
 
-export const TaskMessage = z.strictObject({
-  type: z.literal('task'),
-  prompt: z.string().min(1),
-  context: z.record(z.string(), z.unknown()).optional(),
-  parent_session_id: SessionId.optional(),
-  plan_context: PlanContext.optional(),
-})
+export const TaskMessage = z
+  .strictObject({
+    type: z.literal('task'),
+    prompt: z.string().min(1),
+    context: z.record(z.string(), z.unknown()).optional(),
+    parent_session_id: SessionId.optional(),
+    plan_context: PlanContext.optional(),
+  })
+  .describe('A `task` is used to request a specialist to perform a specific goal (write-capable)')
 export type TaskMessage = z.infer<typeof TaskMessage>
 
-export const PlanMessage = z.strictObject({
-  type: z.literal('plan'),
-  goal: z.string().min(1).describe('Clear statement of what we are achieving'),
-  steps: z.array(PlanStep).min(1).describe('Numbered steps with specific actions'),
-  assumptions: z.array(z.string()).min(1).describe('What we are assuming or need to clarify'),
-  files_touched: z.array(z.string()).min(1).describe('List of files that will be modified'),
-  verification: z
-    .array(z.string())
-    .min(1)
-    .describe('How to confirm success - commands, tests, or checks to run'),
-  risks: z.array(z.string()).min(1).describe('What could go wrong and how to recover/rollback'),
-})
+export const PlanMessage = z
+  .strictObject({
+    type: z.literal('plan'),
+    goal: z.string().min(1).describe('Clear statement of what we are achieving'),
+    steps: z.array(PlanStep).min(1).describe('Numbered steps with specific actions'),
+    assumptions: z.array(z.string()).min(1).describe('What we are assuming or need to clarify'),
+    files_touched: z.array(z.string()).min(1).describe('List of files that will be modified'),
+    verification: z
+      .array(z.string())
+      .min(1)
+      .describe('How to confirm success - commands, tests, or checks to run'),
+    risks: z.array(z.string()).min(1).describe('What could go wrong and how to recover/rollback'),
+  })
+  .describe('A `plan` contains the details necessary for orca to execute')
 export type PlanMessage = z.infer<typeof PlanMessage>
 
-export const AnswerMessage = z.strictObject({
-  type: z.literal('answer'),
-  content: z.string(),
-  sources: z.array(Source).optional(),
-  annotations: z.array(Annotation).optional(),
-})
+export const AnswerMessage = z
+  .strictObject({
+    type: z.literal('answer'),
+    content: z.string(),
+    sources: z.array(Source).optional(),
+    annotations: z.array(Annotation).optional(),
+  })
+  .describe('An `answer` is used to provide a response to a `question`')
 export type AnswerMessage = z.infer<typeof AnswerMessage>
 
-export const QuestionMessage = z.strictObject({
-  type: z.literal('question'),
-  question: z.string().min(1),
-  options: z.array(z.string()).optional(),
-  blocking: z.boolean(),
-})
+export const QuestionMessage = z
+  .strictObject({
+    type: z.literal('question'),
+    question: z.string().min(1),
+    options: z.array(z.string()).optional(),
+    blocking: z.boolean(),
+  })
+  .describe('A `question` is used when asking a specialist or the planner a question (read-only)')
 export type QuestionMessage = z.infer<typeof QuestionMessage>
 
-export const InterruptMessage = z.strictObject({
-  type: z.literal('interrupt'),
-  reason: z.string().min(1),
-})
+export const InterruptMessage = z
+  .strictObject({
+    type: z.literal('interrupt'),
+    reason: z.string().min(1),
+  })
+  .describe('Used when an interrupt in plan execution occurs')
 export type InterruptMessage = z.infer<typeof InterruptMessage>
 
 export const FailureMessage = z.strictObject({

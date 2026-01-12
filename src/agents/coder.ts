@@ -4,7 +4,7 @@ import type { AgentConfig } from '../plugin/config'
 export const coder: AgentConfig = {
   mode: 'subagent',
   specialist: true,
-  messageTypes: ['task'],
+  accepts: ['task'],
   description: 'Implements code changes, features, and bug fixes',
   prompt: dedent`
     You are a coding agent specialized in implementing changes to codebases.
