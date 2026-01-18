@@ -12,16 +12,24 @@ let globalLogger: Logger | undefined
 export function initLogger(clientNext: OpencodeClientV2): Logger {
   globalLogger = {
     debug: (message, extra) => {
-      clientNext.app.log({ service: 'orca', level: 'debug', message, extra }).catch(() => {})
+      clientNext.app.log({ service: 'orca', level: 'debug', message, extra }).catch((err) => {
+        console.error('[orca] Failed to send debug log', { message, extra, error: err })
+      })
     },
     info: (message, extra) => {
-      clientNext.app.log({ service: 'orca', level: 'info', message, extra }).catch(() => {})
+      clientNext.app.log({ service: 'orca', level: 'info', message, extra }).catch((err) => {
+        console.error('[orca] Failed to send info log', { message, extra, error: err })
+      })
     },
     warn: (message, extra) => {
-      clientNext.app.log({ service: 'orca', level: 'warn', message, extra }).catch(() => {})
+      clientNext.app.log({ service: 'orca', level: 'warn', message, extra }).catch((err) => {
+        console.error('[orca] Failed to send warn log', { message, extra, error: err })
+      })
     },
     error: (message, extra) => {
-      clientNext.app.log({ service: 'orca', level: 'error', message, extra }).catch(() => {})
+      clientNext.app.log({ service: 'orca', level: 'error', message, extra }).catch((err) => {
+        console.error('[orca] Failed to send error log', { message, extra, error: err })
+      })
     },
   }
   return globalLogger
