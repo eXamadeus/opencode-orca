@@ -40,6 +40,8 @@ export function handleQuestionRejected(requestID: string): void {
     log.info('Question rejected', { requestID })
     pending.delete(requestID)
     p({ type: 'rejected' })
+  } else {
+    log.warn('No pending question found', { requestID })
   }
 }
 
