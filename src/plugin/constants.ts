@@ -10,11 +10,5 @@
  */
 export const SPECIALIST_LIST_PLACEHOLDER = '{{SPECIALIST_LIST}}'
 
-/**
- * Core orchestration agents that cannot be overridden by user configuration.
- * User config for these agents is completely ignored to ensure system integrity.
- */
-export const PROTECTED_AGENTS = ['orca', 'planner'] as const
-
 /** Timeout for HITL questions before they are considered abandoned (30 minutes) */
 export const QUESTION_TIMEOUT_MS = 30 * 60 * 1000

@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "User configuration for the Orca plugin.\n\nSupports:\n- Configuring orca/planner via dedicated top-level keys (restricted fields only)\n- Overriding specialist agent settings (partial configs)\n- Adding completely new custom agents (full configs)\n- Global Orca settings (default supervision, default model)",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "JSON Schema reference for editor support",
+      "type": "string"
+    },
+    "orca": {
+      "description": "Configuration overrides for the orca orchestrator",
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "top_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "maxSteps": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "planner": {
+      "description": "Configuration overrides for the planner agent",
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "top_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "maxSteps": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "agents": {
+      "description": "Agent configurations for specialist agents (override or new)",
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "description": "Non-empty unique string identifier for agents",
+        "type": "string",
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "description": "Agent configuration for the Orca plugin.\nMatches OpenCode's AgentConfig structure.",
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string"
+          },
+          "temperature": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "top_p": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "tools": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          },
+          "disable": {
+            "description": "Whether to disable this agent",
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["subagent", "primary", "all"]
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          },
+          "maxSteps": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "permission": {
+            "description": "Permission settings for agent actions",
+            "type": "object",
+            "properties": {
+              "edit": {
+                "type": "string",
+                "enum": ["ask", "allow", "deny"]
+              },
+              "bash": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["ask", "allow", "deny"]
+                  },
+                  {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "enum": ["ask", "allow", "deny"]
+                    }
+                  }
+                ]
+              },
+              "webfetch": {
+                "type": "string",
+                "enum": ["ask", "allow", "deny"]
+              },
+              "doom_loop": {
+                "type": "string",
+                "enum": ["ask", "allow", "deny"]
+              },
+              "external_directory": {
+                "type": "string",
+                "enum": ["ask", "allow", "deny"]
+              }
+            },
+            "additionalProperties": false
+          },
+          "supervised": {
+            "description": "Whether this agent requires approval before dispatch",
+            "type": "boolean"
+          },
+          "accepts": {
+            "description": "Message types this agent accepts.\nDefaults to ['task', 'question'] for specialist agents.",
+            "default": [],
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "question"
+                },
+                {
+                  "type": "string",
+                  "const": "task"
+                }
+              ]
+            }
+          },
+          "specialist": {
+            "description": "Whether this agent appears in Orca's \"Available specialists\" list.\nDefaults to true for built-in subagents, false for user-defined agents.",
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": {}
+      }
+    },
+    "settings": {
+      "description": "Global Orca settings",
+      "default": {
+        "updateNotifier": true
+      },
+      "type": "object",
+      "properties": {
+        "defaultSupervised": {
+          "description": "Whether agents require approval by default",
+          "type": "boolean"
+        },
+        "defaultModel": {
+          "description": "Default model for agents that don't specify one",
+          "type": "string"
+        },
+        "validation": {
+          "description": "Validation settings",
+          "type": "object",
+          "properties": {
+            "maxRetries": {
+              "description": "Max retries for validation failures",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "wrapPlainText": {
+              "description": "Wrap plain text responses in result messages",
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "updateNotifier": {
+          "description": "Show notifications about plugin updates (default: true)",
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["agents", "settings"],
+  "additionalProperties": false,
+  "$id": "https://github.com/ex-machina-co/opencode-orca/orca.schema.json",
+  "title": "Orca Configuration"
+}

@@ -9,7 +9,8 @@
   },
   "scripts": {
     "dev": "tsup --watch",
-    "build": "tsup",
+    "build": "tsup && bun scripts/generate-schema.ts",
+    "generate:schema": "bun scripts/generate-schema.ts",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "lint:staged": "biome check --staged --fix --no-errors-on-unmatched",
