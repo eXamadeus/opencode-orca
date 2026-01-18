@@ -49,14 +49,12 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "^1.1.12",
+    "@opencode-ai/plugin": "npm:@ex-machina/opencode-plugin@1.1.25-exmachina.4",
+    "@opencode-ai/sdk": "npm:@ex-machina/opencode-sdk@1.1.25-exmachina.4",
     "comment-json": "^4.5.1",
     "dedent": "^1.7.1",
     "lodash": "^4.17.21",
     "zod": "4.1.8"
-  },
-  "peerDependencies": {
-    "@opencode-ai/plugin": "^1.1.12"
   },
   "files": [
     "dist",
