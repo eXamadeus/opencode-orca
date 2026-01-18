@@ -1,4 +1,7 @@
 {
+  "$schema": "./orca.schema.json",
+  "orca": { "model": "openai/gpt-5.2" },
+  "planner": { "model": "anthropic/claude-opus-4-5" },
   "settings": {
     "defaultSupervised": false,
     "defaultModel": "openai/gpt-5.2",
@@ -7,9 +10,7 @@
   "agents": {
     "executor": { "model": "anthropic/claude-opus-4-5" },
     "strategist": { "mode": "subagent" },
-    "orca": { "model": "openai/gpt-5.2", "reasoningEffort": "low" },
     "github": { "model": "openai/gpt-5.2", "reasoningEffort": "medium", "specialist": true },
-    "planner": { "model": "anthropic/claude-opus-4-5" },
     "architect": { "model": "anthropic/claude-opus-4-5" },
     "coder": { "model": "anthropic/claude-opus-4-5" },
     "product-manager": { "specialist": true }

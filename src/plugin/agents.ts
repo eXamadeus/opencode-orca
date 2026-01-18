@@ -7,10 +7,12 @@ import { planner } from '../agents/planner'
 import { researcher } from '../agents/researcher'
 import { reviewer } from '../agents/reviewer'
 import { tester } from '../agents/tester'
-import { AgentConfig } from './config'
-import { PROTECTED_AGENTS, SPECIALIST_LIST_PLACEHOLDER } from './constants'
+import { AgentConfig, type OrcaAgentConfig, type PlannerAgentConfig } from './config'
+import { SPECIALIST_LIST_PLACEHOLDER } from './constants'
 import { getLogger } from './log'
 import { generateResponseFormatInstructions } from './response-format'
+
+const ORCHESTRATION_AGENTS = ['orca', 'planner'] as const
 
 const mergeConfigs = (a: AgentConfig, b: AgentConfig): AgentConfig => {
   return {
@@ -117,8 +119,22 @@ function mergeAgentConfig(base: AgentConfig, override: AgentConfig): AgentConfig
 }
 
 /**
+ * User configuration for merging agents.
+ * Orchestration agents (orca, planner) have dedicated top-level keys with restricted fields.
+ * Specialist agents are configured via the agents record.
+ */
+export type UserAgentConfig = {
+  orca?: OrcaAgentConfig
+  planner?: PlannerAgentConfig
+  agents?: Record<string, AgentConfig>
+}
+
+/**
  * Merge default agents with user overrides/additions
  *
+ * - Orchestration agents (orca, planner) use dedicated top-level config keys with restricted fields
+ * - If user tries to configure orca/planner in `agents`, a warning is shown and config is ignored
+ * - Specialist agents are configured via the `agents` record
  * - If user provides config for an existing agent, it's merged (user overrides defaults)
  * - If user provides a new agent, it's added as-is
  * - If user sets `disable: true`, the agent is excluded from the result
@@ -126,18 +142,22 @@ function mergeAgentConfig(base: AgentConfig, override: AgentConfig): AgentConfig
  * - Built-in agents default to `specialist: true`, user-defined agents default to `specialist: false`
  *
  * @param defaults - Default agent definitions
- * @param userAgents - User agent configurations (overrides and additions)
+ * @param userConfig - User configuration with orca, planner, and agents
  * @returns Merged agent configurations
  */
 export function mergeAgentConfigs(
   defaults: Record<string, AgentConfig>,
-  userAgents?: Record<string, AgentConfig>,
+  userConfig?: UserAgentConfig,
 ): Record<string, AgentConfig> {
-  // Warn about protected agent overrides (user config will be ignored)
+  const userAgents = userConfig?.agents
+
+  // Warn if user tries to configure orchestration agents in the agents record
   if (userAgents) {
-    for (const agentId of PROTECTED_AGENTS) {
+    for (const agentId of ORCHESTRATION_AGENTS) {
       if (agentId in userAgents) {
-        getLogger().warn(`"${agentId}" agent cannot be overridden. User config ignored.`)
+        getLogger().warn(
+          `"${agentId}" cannot be configured in "agents". Use the top-level "${agentId}" key instead.`,
+        )
       }
     }
   }
@@ -145,10 +165,20 @@ export function mergeAgentConfigs(
   // Start with defaults
   const result: Record<string, AgentConfig> = {}
 
-  // Process defaults, applying any user overrides
+  // Process defaults, applying user overrides
   for (const [agentId, defaultConfig] of Object.entries(defaults)) {
-    // Protected agents: use default config as-is (ignore user overrides entirely)
-    if (PROTECTED_AGENTS.includes(agentId as (typeof PROTECTED_AGENTS)[number])) {
+    // Orchestration agents: merge only safe fields from dedicated config
+    if (agentId === 'orca' && userConfig?.orca) {
+      result[agentId] = mergeAgentConfig(defaultConfig, userConfig.orca)
+      continue
+    }
+    if (agentId === 'planner' && userConfig?.planner) {
+      result[agentId] = mergeAgentConfig(defaultConfig, userConfig.planner)
+      continue
+    }
+
+    // Skip orchestration agents in the agents record (already warned)
+    if (ORCHESTRATION_AGENTS.includes(agentId as (typeof ORCHESTRATION_AGENTS)[number])) {
       result[agentId] = defaultConfig
       continue
     }

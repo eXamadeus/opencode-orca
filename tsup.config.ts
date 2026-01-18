@@ -1,10 +1,10 @@
 import { defineConfig } from 'tsup'
 
 export default defineConfig([
-  // Main library entry
+  // Main library entry (ESM only - OpenCode is ESM)
   {
     entry: ['src/index.ts'],
-    format: ['esm', 'cjs'],
+    format: ['esm'],
     dts: true,
     clean: true,
     sourcemap: true,

@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import {
   DEFAULT_AGENTS,
+  type UserAgentConfig,
   generateSpecialistList,
   injectSpecialistList,
   mergeAgentConfigs,
   parseAgentConfig,
 } from '../agents'
-import type { AgentConfig } from '../config'
-import { PROTECTED_AGENTS, SPECIALIST_LIST_PLACEHOLDER } from '../constants'
+import type { AgentConfig, OrcaAgentConfig, PlannerAgentConfig } from '../config'
+import { SPECIALIST_LIST_PLACEHOLDER } from '../constants'
 import { RESPONSE_FORMAT_INJECTION_HEADER } from '../response-format'
 import { type MockLogger, mockLogger } from './test-utils'
 
@@ -132,136 +133,162 @@ describe('DEFAULT_AGENTS accepts', () => {
   })
 })
 
-describe('PROTECTED_AGENTS', () => {
-  test('contains orca and planner', () => {
-    expect(PROTECTED_AGENTS).toContain('orca')
-    expect(PROTECTED_AGENTS).toContain('planner')
-  })
-})
-
-describe('protected agents in mergeAgentConfigs', () => {
+describe('orchestration agents in mergeAgentConfigs', () => {
   let log: MockLogger
 
   beforeEach(() => {
     log = mockLogger()
   })
 
-  test('orca config cannot be overridden', () => {
+  test('orca config in agents record is ignored and warns', () => {
     const defaults: Record<string, AgentConfig> = {
       orca: { mode: 'primary', accepts: [], prompt: 'Default prompt', color: '#000000' },
     }
-    const user: Record<string, AgentConfig> = {
-      orca: { accepts: ['task'], prompt: 'Custom prompt', model: 'gpt-4o' },
-    }
-    const result = mergeAgentConfigs(defaults, user)
-
-    // Entire config should be unchanged
-    expect(result.orca).toEqual(defaults.orca)
-    expect(result.orca.accepts).toEqual([])
-    expect(result.orca.prompt).toBe('Default prompt')
-    expect(result.orca.model).toBeUndefined()
-  })
-
-  test('planner config cannot be overridden', () => {
-    const defaults: Record<string, AgentConfig> = {
-      planner: {
-        mode: 'subagent',
-        accepts: ['question'],
-        prompt: 'Default planner prompt',
+    const userConfig: UserAgentConfig = {
+      agents: {
+        orca: { accepts: ['task'], prompt: 'Custom prompt', model: 'gpt-4o' },
       },
     }
-    const user: Record<string, AgentConfig> = {
-      planner: { accepts: ['task'], prompt: 'Custom prompt', model: 'gpt-4o' },
-    }
-    const result = mergeAgentConfigs(defaults, user)
 
-    // Entire config should be unchanged
+    const result = mergeAgentConfigs(defaults, userConfig)
+
+    expect(result.orca).toEqual(defaults.orca)
+    expect(log.warn.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          ""orca" cannot be configured in "agents". Use the top-level "orca" key instead.",
+        ],
+      ]
+    `)
+  })
+
+  test('planner config in agents record is ignored and warns', () => {
+    const defaults: Record<string, AgentConfig> = {
+      planner: { mode: 'subagent', accepts: ['question'], prompt: 'Default planner prompt' },
+    }
+    const userConfig: UserAgentConfig = {
+      agents: {
+        planner: { accepts: ['task'], prompt: 'Custom prompt', model: 'gpt-4o' },
+      },
+    }
+
+    const result = mergeAgentConfigs(defaults, userConfig)
+
     expect(result.planner).toEqual(defaults.planner)
-    expect(result.planner.accepts).toEqual(['question'])
+    expect(log.warn.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          ""planner" cannot be configured in "agents". Use the top-level "planner" key instead.",
+        ],
+      ]
+    `)
+  })
+
+  test('orca safe fields can be configured via top-level key', () => {
+    const defaults: Record<string, AgentConfig> = {
+      orca: { mode: 'primary', accepts: [], prompt: 'Default prompt', color: '#000000' },
+    }
+    const userConfig: UserAgentConfig = {
+      orca: { model: 'gpt-4o', temperature: 0.7, color: '#FF0000' },
+    }
+
+    const result = mergeAgentConfigs(defaults, userConfig)
+
+    expect(result.orca.model).toBe('gpt-4o')
+    expect(result.orca.temperature).toBe(0.7)
+    expect(result.orca.color).toBe('#FF0000')
+    expect(result.orca.prompt).toBe('Default prompt')
+    expect(result.orca.mode).toBe('primary')
+    expect(result.orca.accepts).toEqual([])
+    expect(log.warn.mock.calls).toMatchInlineSnapshot('[]')
+  })
+
+  test('planner safe fields can be configured via top-level key', () => {
+    const defaults: Record<string, AgentConfig> = {
+      planner: { mode: 'subagent', accepts: ['question'], prompt: 'Default planner prompt' },
+    }
+    const userConfig: UserAgentConfig = {
+      planner: { model: 'claude-3', maxSteps: 20 },
+    }
+
+    const result = mergeAgentConfigs(defaults, userConfig)
+
+    expect(result.planner.model).toBe('claude-3')
+    expect(result.planner.maxSteps).toBe(20)
     expect(result.planner.prompt).toBe('Default planner prompt')
-    expect(result.planner.model).toBeUndefined()
+    expect(result.planner.mode).toBe('subagent')
+    expect(result.planner.accepts).toEqual(['question'])
+    expect(log.warn.mock.calls).toMatchInlineSnapshot('[]')
   })
 
-  test('emits warning when user tries to override orca', () => {
-    const defaults: Record<string, AgentConfig> = {
-      orca: { mode: 'primary', accepts: [] },
-    }
-    const user: Record<string, AgentConfig> = {
-      orca: { model: 'gpt-4o' },
-    }
-    mergeAgentConfigs(defaults, user)
-
-    expect(log.warn.mock.calls).toMatchInlineSnapshot(`
-      [
-        [
-          ""orca" agent cannot be overridden. User config ignored.",
-        ],
-      ]
-    `)
-  })
-
-  test('emits warning when user tries to override planner', () => {
-    const defaults: Record<string, AgentConfig> = {
-      planner: { mode: 'subagent' },
-    }
-    const user: Record<string, AgentConfig> = {
-      planner: { model: 'gpt-4o' },
-    }
-    mergeAgentConfigs(defaults, user)
-
-    expect(log.warn.mock.calls).toMatchInlineSnapshot(`
-      [
-        [
-          ""planner" agent cannot be overridden. User config ignored.",
-        ],
-      ]
-    `)
-  })
-
-  test('emits warnings for both protected agents when both are overridden', () => {
+  test('emits warnings for both when both are in agents record', () => {
     const defaults: Record<string, AgentConfig> = {
       orca: { mode: 'primary' },
       planner: { mode: 'subagent' },
     }
-    const user: Record<string, AgentConfig> = {
-      orca: { model: 'gpt-4o' },
-      planner: { model: 'gpt-4o' },
+    const userConfig: UserAgentConfig = {
+      agents: {
+        orca: { model: 'gpt-4o' },
+        planner: { model: 'gpt-4o' },
+      },
     }
-    mergeAgentConfigs(defaults, user)
+
+    mergeAgentConfigs(defaults, userConfig)
 
     expect(log.warn.mock.calls).toMatchInlineSnapshot(`
       [
         [
-          ""orca" agent cannot be overridden. User config ignored.",
+          ""orca" cannot be configured in "agents". Use the top-level "orca" key instead.",
         ],
         [
-          ""planner" agent cannot be overridden. User config ignored.",
+          ""planner" cannot be configured in "agents". Use the top-level "planner" key instead.",
         ],
       ]
     `)
   })
 
-  test('no warning when user config does not include protected agents', () => {
+  test('no warning when using top-level keys correctly', () => {
+    const defaults: Record<string, AgentConfig> = {
+      orca: { mode: 'primary' },
+      planner: { mode: 'subagent' },
+    }
+    const userConfig: UserAgentConfig = {
+      orca: { model: 'gpt-4o' },
+      planner: { model: 'claude-3' },
+    }
+
+    mergeAgentConfigs(defaults, userConfig)
+
+    expect(log.warn.mock.calls).toMatchInlineSnapshot('[]')
+  })
+
+  test('no warning when user config does not include orchestration agents', () => {
     const defaults: Record<string, AgentConfig> = {
       orca: { mode: 'primary' },
       coder: { mode: 'subagent' },
     }
-    const user: Record<string, AgentConfig> = {
-      coder: { model: 'gpt-4o' },
+    const userConfig: UserAgentConfig = {
+      agents: {
+        coder: { model: 'gpt-4o' },
+      },
     }
-    mergeAgentConfigs(defaults, user)
 
-    expect(log.warn).not.toHaveBeenCalled()
+    mergeAgentConfigs(defaults, userConfig)
+
+    expect(log.warn.mock.calls).toMatchInlineSnapshot('[]')
   })
 
-  test('non-protected agents can override accepts', () => {
+  test('specialist agents can override accepts via agents record', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent', accepts: ['task'] },
     }
-    const user: Record<string, AgentConfig> = {
-      coder: { accepts: ['question'] },
+    const userConfig: UserAgentConfig = {
+      agents: {
+        coder: { accepts: ['question'] },
+      },
     }
-    const result = mergeAgentConfigs(defaults, user)
+
+    const result = mergeAgentConfigs(defaults, userConfig)
     expect(result.coder.accepts).toEqual(['question'])
   })
 
@@ -269,13 +296,16 @@ describe('protected agents in mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent' },
     }
-    const user: Record<string, AgentConfig> = {
-      'my-specialist': {
-        mode: 'subagent',
-        accepts: ['task', 'question'],
+    const userConfig: UserAgentConfig = {
+      agents: {
+        'my-specialist': {
+          mode: 'subagent',
+          accepts: ['task', 'question'],
+        },
       },
     }
-    const result = mergeAgentConfigs(defaults, user)
+
+    const result = mergeAgentConfigs(defaults, userConfig)
     expect(result['my-specialist'].accepts).toEqual(['task', 'question'])
   })
 })
@@ -301,10 +331,9 @@ describe('mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent', prompt: 'Default prompt', color: '#000000' },
     }
-    const user: Record<string, AgentConfig> = {
-      coder: { model: 'gpt-4o' },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: { coder: { model: 'gpt-4o' } },
+    })
 
     // User's model applied
     expect(result.coder.model).toBe('gpt-4o')
@@ -318,10 +347,9 @@ describe('mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent', prompt: 'Default prompt' },
     }
-    const user: Record<string, AgentConfig> = {
-      coder: { prompt: 'Custom prompt' },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: { coder: { prompt: 'Custom prompt' } },
+    })
     expect(result.coder.prompt).toBe('Custom prompt')
     expect(result.coder.mode).toBe('subagent')
   })
@@ -331,10 +359,9 @@ describe('mergeAgentConfigs', () => {
       coder: { mode: 'subagent', prompt: 'Coder' },
       tester: { mode: 'subagent', prompt: 'Tester' },
     }
-    const user: Record<string, AgentConfig> = {
-      coder: { disable: true },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: { coder: { disable: true } },
+    })
 
     expect(result.coder).toBeUndefined()
     expect(result.tester).toBeDefined()
@@ -344,10 +371,11 @@ describe('mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent', prompt: 'Coder' },
     }
-    const user: Record<string, AgentConfig> = {
-      'my-specialist': { mode: 'subagent', prompt: 'Custom specialist', color: '#FF0000' },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: {
+        'my-specialist': { mode: 'subagent', prompt: 'Custom specialist', color: '#FF0000' },
+      },
+    })
 
     expect(result.coder).toBeDefined()
     expect(result['my-specialist']).toBeDefined()
@@ -358,10 +386,9 @@ describe('mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent' },
     }
-    const user: Record<string, AgentConfig> = {
-      'my-specialist': { mode: 'subagent', disable: true },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: { 'my-specialist': { mode: 'subagent', disable: true } },
+    })
 
     expect(result.coder).toBeDefined()
     expect(result['my-specialist']).toBeUndefined()
@@ -372,10 +399,9 @@ describe('mergeAgentConfigs', () => {
       coder: { mode: 'subagent', prompt: 'Coder' },
       tester: { mode: 'subagent', prompt: 'Tester' },
     }
-    const user: Record<string, AgentConfig> = {
-      coder: { enabled: false },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: { coder: { enabled: false } },
+    })
 
     expect(result.coder).toBeUndefined()
     expect(result.tester).toBeDefined()
@@ -385,10 +411,9 @@ describe('mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent' },
     }
-    const user: Record<string, AgentConfig> = {
-      'my-specialist': { mode: 'subagent', enabled: false },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: { 'my-specialist': { mode: 'subagent', enabled: false } },
+    })
 
     expect(result.coder).toBeDefined()
     expect(result['my-specialist']).toBeUndefined()
@@ -398,10 +423,9 @@ describe('mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent', specialist: true },
     }
-    const user: Record<string, AgentConfig> = {
-      'my-agent': { mode: 'subagent', prompt: 'Custom agent' },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: { 'my-agent': { mode: 'subagent', prompt: 'Custom agent' } },
+    })
 
     expect(result['my-agent'].specialist).toBe(false)
   })
@@ -410,10 +434,9 @@ describe('mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent', specialist: true },
     }
-    const user: Record<string, AgentConfig> = {
-      'my-agent': { mode: 'subagent', prompt: 'Custom agent', specialist: true },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: { 'my-agent': { mode: 'subagent', prompt: 'Custom agent', specialist: true } },
+    })
 
     expect(result['my-agent'].specialist).toBe(true)
   })
@@ -422,10 +445,9 @@ describe('mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent', specialist: true },
     }
-    const user: Record<string, AgentConfig> = {
-      coder: { model: 'gpt-4o' }, // Override without specialist
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: { coder: { model: 'gpt-4o' } }, // Override without specialist
+    })
 
     expect(result.coder.specialist).toBe(true)
     expect(result.coder.model).toBe('gpt-4o')
@@ -435,10 +457,9 @@ describe('mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent', specialist: true },
     }
-    const user: Record<string, AgentConfig> = {
-      coder: { specialist: false },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: { coder: { specialist: false } },
+    })
 
     expect(result.coder.specialist).toBe(false)
   })
@@ -450,12 +471,11 @@ describe('mergeAgentConfigs', () => {
         tools: { read: true, edit: true, bash: false },
       },
     }
-    const user: Record<string, AgentConfig> = {
-      coder: {
-        tools: { bash: true, webfetch: true },
+    const result = mergeAgentConfigs(defaults, {
+      agents: {
+        coder: { tools: { bash: true, webfetch: true } },
       },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    })
 
     expect(result.coder.tools).toEqual({
       read: true, // preserved from default
@@ -472,12 +492,11 @@ describe('mergeAgentConfigs', () => {
         permission: { edit: 'ask', bash: 'deny' },
       },
     }
-    const user: Record<string, AgentConfig> = {
-      coder: {
-        permission: { bash: 'allow' },
+    const result = mergeAgentConfigs(defaults, {
+      agents: {
+        coder: { permission: { bash: 'allow' } },
       },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    })
 
     expect(result.coder.permission).toEqual({
       edit: 'ask', // preserved from default
@@ -489,13 +508,14 @@ describe('mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent', prompt: 'Default' },
     }
-    const user: Record<string, AgentConfig> = {
-      coder: {
-        model: 'openai/o1',
-        reasoningEffort: 'high', // pass-through option
-      } as AgentConfig,
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: {
+        coder: {
+          model: 'openai/o1',
+          reasoningEffort: 'high', // pass-through option
+        } as AgentConfig,
+      },
+    })
 
     expect(result.coder.model).toBe('openai/o1')
     expect((result.coder as Record<string, unknown>).reasoningEffort).toBe('high')
@@ -506,10 +526,9 @@ describe('mergeAgentConfigs', () => {
     const defaults: Record<string, AgentConfig> = {
       coder: { mode: 'subagent', prompt: 'Default', color: '#000000' },
     }
-    const user: Record<string, AgentConfig> = {
-      coder: { model: 'gpt-4o', color: undefined },
-    }
-    const result = mergeAgentConfigs(defaults, user)
+    const result = mergeAgentConfigs(defaults, {
+      agents: { coder: { model: 'gpt-4o', color: undefined } },
+    })
 
     expect(result.coder.model).toBe('gpt-4o')
     expect(result.coder.color).toBe('#000000') // undefined doesn't override

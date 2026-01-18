@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import { type Plugin, tool } from '@opencode-ai/plugin'
 import type { Event, QuestionAnswer } from '@opencode-ai/sdk/v2'
 import { DispatchPayload } from '../schemas/messages'
@@ -6,6 +7,7 @@ import { loadUserConfig } from './config'
 import { type DispatchContext, dispatchToAgent } from './dispatch'
 import { initLogger } from './log'
 import { handleQuestionRejected, handleQuestionReplied } from './question'
+import { ensureSchema } from './schema'
 import { resolveValidationConfig } from './types'
 import { runUpdateNotifier } from './update-notifier'
 import { getPluginVersion } from './version'
@@ -28,8 +30,15 @@ export const createOrcaPlugin = (): Plugin => {
     }
 
     // Merge default agents with user overrides/additions
-    const agents = mergeAgentConfigs(DEFAULT_AGENTS, userConfig?.agents)
+    const agents = mergeAgentConfigs(DEFAULT_AGENTS, {
+      orca: userConfig?.orca,
+      planner: userConfig?.planner,
+      agents: userConfig?.agents,
+    })
     const validationConfig = resolveValidationConfig(userConfig?.settings)
+
+    // Ensure schema file exists for editor autocomplete (silent failure)
+    ensureSchema(join(directory, '.opencode'))
 
     // Track plugin entry for update notifier (will be populated in config hook)
     let pluginEntry: string | undefined
@@ -112,6 +121,21 @@ export const createOrcaPlugin = (): Plugin => {
                   message: configLoadError,
                   variant: 'error',
                   duration: 20_000,
+                },
+              })
+              .catch(() => {})
+          }, 0)
+        } else {
+          // Show startup toast
+          setTimeout(() => {
+            const version = getPluginVersion()
+            client.tui
+              .showToast({
+                body: {
+                  title: `Orca v${version}`,
+                  message: 'Loaded and ready to orchestrate',
+                  variant: 'success',
+                  duration: 5_000,
                 },
               })
               .catch(() => {})

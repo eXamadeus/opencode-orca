@@ -97,19 +97,50 @@ export const OrcaSettings = z
   .describe('Orca specific settings')
 export type OrcaSettings = z.infer<typeof OrcaSettings>
 
+/**
+ * Safe fields that users can configure for orchestration agents (orca, planner).
+ * These fields don't affect core orchestration logic.
+ */
+const SafeAgentFields = {
+  model: z.string().optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  top_p: z.number().min(0).max(1).optional(),
+  maxSteps: z.number().int().positive().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
+}
+
+export const OrcaAgentConfig = z
+  .strictObject(SafeAgentFields)
+  .describe('Restricted configuration for the orca orchestrator agent')
+export type OrcaAgentConfig = z.infer<typeof OrcaAgentConfig>
+
+export const PlannerAgentConfig = z
+  .strictObject(SafeAgentFields)
+  .describe('Restricted configuration for the planner agent')
+export type PlannerAgentConfig = z.infer<typeof PlannerAgentConfig>
+
 export const OrcaUserConfig = z
   .strictObject({
+    $schema: z.string().optional().describe('JSON Schema reference for editor support'),
+    orca: OrcaAgentConfig.optional().describe('Configuration overrides for the orca orchestrator'),
+    planner: PlannerAgentConfig.optional().describe(
+      'Configuration overrides for the planner agent',
+    ),
     agents: z
       .record(AgentId, AgentConfig)
       .default({})
-      .describe('Agent configurations for override or new agents'),
+      .describe('Agent configurations for specialist agents (override or new)'),
     settings: OrcaSettings.default(OrcaSettings.parse({})).describe('Global Orca settings'),
   })
   .describe(dedent`
     User configuration for the Orca plugin.
     
     Supports:
-    - Overriding default agent settings (partial configs)
+    - Configuring orca/planner via dedicated top-level keys (restricted fields only)
+    - Overriding specialist agent settings (partial configs)
     - Adding completely new custom agents (full configs)
     - Global Orca settings (default supervision, default model)
   `)

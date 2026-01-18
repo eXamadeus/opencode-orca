@@ -5,6 +5,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { ensureSchema } from '../../plugin/schema'
 import { info, success, warn } from '../utils/console'
 import { getOpenCodeDirPath, getOrcaConfigPath } from '../utils/paths'
 
@@ -84,6 +85,11 @@ export async function init(options: InitOptions = {}): Promise<void> {
   writeFileSync(orcaConfigPath, template, 'utf-8')
 
   success(`Created ${orcaConfigPath}`)
+
+  // Copy schema file for editor autocomplete
+  if (ensureSchema(opencodeDirPath)) {
+    success('Created .opencode/orca.schema.json')
+  }
 
   if (!options.quiet) {
     info('')
