@@ -9,6 +9,7 @@ import { reviewer } from '../agents/reviewer'
 import { tester } from '../agents/tester'
 import { AgentConfig } from './config'
 import { PROTECTED_AGENTS, SPECIALIST_LIST_PLACEHOLDER } from './constants'
+import { getLogger } from './log'
 import { generateResponseFormatInstructions } from './response-format'
 
 const mergeConfigs = (a: AgentConfig, b: AgentConfig): AgentConfig => {
@@ -136,9 +137,7 @@ export function mergeAgentConfigs(
   if (userAgents) {
     for (const agentId of PROTECTED_AGENTS) {
       if (agentId in userAgents) {
-        console.warn(
-          `[orca] Warning: "${agentId}" agent cannot be overridden. User config ignored.`,
-        )
+        getLogger().warn(`"${agentId}" agent cannot be overridden. User config ignored.`)
       }
     }
   }
