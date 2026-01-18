@@ -1,4 +1,5 @@
 import type { OpencodeClient, Part } from '@opencode-ai/sdk'
+import type { OpencodeClient as OpencodeClientV2 } from '@opencode-ai/sdk/v2'
 import {
   type CheckpointMessage,
   DispatchPayload,
@@ -14,8 +15,10 @@ import { createFailureMessage, validateWithRetry } from './validation'
  * Context for dispatch operations
  */
 export interface DispatchContext {
-  /** OpenCode SDK client */
+  /** OpenCode SDK client (v1) */
   client: OpencodeClient
+  /** OpenCode SDK client (v2 - for question API) */
+  clientNext: OpencodeClientV2
   /** Registered agents */
   agents: Record<string, AgentConfig>
   /** Validation configuration */
@@ -24,6 +27,8 @@ export interface DispatchContext {
   settings?: OrcaSettings
   /** Abort signal for cancellation */
   abort?: AbortSignal
+  /** Parent session ID (for HITL questions) */
+  parentSessionId?: string
 }
 
 /**

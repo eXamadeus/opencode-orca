@@ -1,15 +1,21 @@
 import { type Plugin, tool } from '@opencode-ai/plugin'
+import type { Event, QuestionAnswer } from '@opencode-ai/sdk/v2'
 import { DispatchPayload } from '../schemas/messages'
 import { DEFAULT_AGENTS, mergeAgentConfigs } from './agents'
 import { loadUserConfig } from './config'
 import { type DispatchContext, dispatchToAgent } from './dispatch'
+import { initLogger } from './log'
+import { handleQuestionRejected, handleQuestionReplied } from './question'
 import { resolveValidationConfig } from './types'
 import { runUpdateNotifier } from './update-notifier'
 import { getPluginVersion } from './version'
 
 export const createOrcaPlugin = (): Plugin => {
   return async (input) => {
-    const { client, directory } = input
+    const { client, clientNext, directory } = input
+
+    // Initialize logger first
+    const log = initLogger(clientNext)
 
     let userConfig: Awaited<ReturnType<typeof loadUserConfig>>
     let configLoadError: string | undefined
@@ -18,7 +24,7 @@ export const createOrcaPlugin = (): Plugin => {
     } catch (error) {
       userConfig = undefined
       configLoadError = error instanceof Error ? error.message : String(error)
-      console.error(`[opencode-orca] Failed to load user config: ${configLoadError}`)
+      log.error('Failed to load user config', { error: configLoadError })
     }
 
     // Merge default agents with user overrides/additions
@@ -38,10 +44,12 @@ export const createOrcaPlugin = (): Plugin => {
           execute: async (args, ctx) => {
             const dispatchCtx: DispatchContext = {
               client,
+              clientNext,
               agents,
               validationConfig,
               settings: userConfig?.settings,
               abort: ctx.abort,
+              parentSessionId: ctx.sessionID,
             }
 
             return dispatchToAgent(args, dispatchCtx)
@@ -62,8 +70,30 @@ export const createOrcaPlugin = (): Plugin => {
         )
       },
 
-      async event({ event }) {
-        // Only run once per startup
+      async event({ event }: { event: Event }) {
+        // Handle question events for HITL workflow
+        if (event.type === 'question.replied') {
+          const props = event.properties as { requestID: string; answers: QuestionAnswer[] }
+          log.info('question.replied event received', {
+            requestID: props.requestID,
+            answers: props.answers,
+          })
+          handleQuestionReplied(props.requestID, props.answers)
+          return
+        }
+
+        if (event.type === 'question.rejected') {
+          const props = event.properties as { requestID: string }
+          log.info('question.rejected event received', { requestID: props.requestID })
+          handleQuestionRejected(props.requestID)
+          return
+        }
+
+        ///////////////////////////////
+        //   UPDATE NOTIFIER BELOW   //
+        ///////////////////////////////
+
+        // Only run update notifier once per startup
         if (hasRunUpdateNotifier) return
 
         // Skip sub-sessions (background tasks)

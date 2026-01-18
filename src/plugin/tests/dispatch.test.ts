@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 import type { OpencodeClient } from '@opencode-ai/sdk'
+import type { OpencodeClient as OpencodeClientV2 } from '@opencode-ai/sdk/v2'
 import type {
   AnswerMessage,
   DispatchPayload,
@@ -54,6 +55,17 @@ function createMockClient(options: {
   return { session: mockSession } as unknown as OpencodeClient
 }
 
+/**
+ * Create a mock OpenCode v2 client for testing (for question API)
+ */
+function createMockClientNext(): OpencodeClientV2 {
+  return {
+    question: {
+      ask: mock(async () => ({ data: { id: 'test-question-id' } })),
+    },
+  } as unknown as OpencodeClientV2
+}
+
 function createTaskDispatch(
   overrides?: Partial<Omit<TaskMessage, 'type' | 'session_id' | 'timestamp'>> & {
     plan_context?: PlanContext
@@ -81,6 +93,7 @@ describe('dispatchToAgent', () => {
   test('returns failure for invalid task message format', async () => {
     const ctx: DispatchContext = {
       client: createMockClient({}),
+      clientNext: createMockClientNext(),
       agents: testAgents,
       validationConfig: DEFAULT_VALIDATION_CONFIG,
     }
@@ -100,6 +113,7 @@ describe('dispatchToAgent', () => {
   test('returns failure when session creation fails', async () => {
     const ctx: DispatchContext = {
       client: createMockClient({ createSessionError: true }),
+      clientNext: createMockClientNext(),
       agents: testAgents,
       validationConfig: DEFAULT_VALIDATION_CONFIG,
     }
@@ -123,6 +137,7 @@ describe('dispatchToAgent', () => {
 
     const ctx: DispatchContext = {
       client: mockClient,
+      clientNext: createMockClientNext(),
       agents: testAgents,
       validationConfig: DEFAULT_VALIDATION_CONFIG,
     }
@@ -140,6 +155,7 @@ describe('dispatchToAgent', () => {
   test('wraps plain text response as answer message', async () => {
     const ctx: DispatchContext = {
       client: createMockClient({ promptResponse: 'Here is my plain text response' }),
+      clientNext: createMockClientNext(),
       agents: testAgents,
       validationConfig: { maxRetries: 2, wrapPlainText: true },
     }
@@ -163,6 +179,7 @@ describe('dispatchToAgent', () => {
 
     const ctx: DispatchContext = {
       client: createMockClient({ promptResponse: validResponse }),
+      clientNext: createMockClientNext(),
       agents: testAgents,
       validationConfig: { maxRetries: 2, wrapPlainText: false },
     }
@@ -181,6 +198,7 @@ describe('dispatchToAgent', () => {
   test('returns failure when agent throws error', async () => {
     const ctx: DispatchContext = {
       client: createMockClient({ promptError: new Error('Agent crashed') }),
+      clientNext: createMockClientNext(),
       agents: testAgents,
       validationConfig: DEFAULT_VALIDATION_CONFIG,
     }
@@ -209,6 +227,7 @@ describe('dispatchToAgent', () => {
 
     const ctx: DispatchContext = {
       client: mockClient,
+      clientNext: createMockClientNext(),
       agents: testAgents,
       validationConfig: DEFAULT_VALIDATION_CONFIG,
       abort: abortController.signal,
@@ -297,6 +316,7 @@ describe('dispatchToAgent with supervision', () => {
   test('returns checkpoint for supervised agent without approved_remaining', async () => {
     const ctx: DispatchContext = {
       client: createMockClient({}),
+      clientNext: createMockClientNext(),
       agents: supervisedAgents,
       validationConfig: DEFAULT_VALIDATION_CONFIG,
     }
@@ -313,6 +333,7 @@ describe('dispatchToAgent with supervision', () => {
   test('proceeds with dispatch when approved_remaining is true', async () => {
     const ctx: DispatchContext = {
       client: createMockClient({ promptResponse: 'Done' }),
+      clientNext: createMockClientNext(),
       agents: supervisedAgents,
       validationConfig: { maxRetries: 2, wrapPlainText: true },
     }
@@ -334,6 +355,7 @@ describe('dispatchToAgent with supervision', () => {
   test('proceeds with dispatch for non-supervised agent', async () => {
     const ctx: DispatchContext = {
       client: createMockClient({ promptResponse: 'Research complete' }),
+      clientNext: createMockClientNext(),
       agents: supervisedAgents,
       validationConfig: { maxRetries: 2, wrapPlainText: true },
     }
@@ -349,6 +371,7 @@ describe('dispatchToAgent with supervision', () => {
   test('uses defaultSupervised from settings', async () => {
     const ctx: DispatchContext = {
       client: createMockClient({}),
+      clientNext: createMockClientNext(),
       agents: { coder: { mode: 'subagent' as const } }, // No explicit supervised flag
       validationConfig: DEFAULT_VALIDATION_CONFIG,
       settings: { defaultSupervised: true },
